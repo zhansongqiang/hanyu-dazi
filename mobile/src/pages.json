@@ -1,0 +1,37 @@
+{
+  "pages": [
+    {
+      "path": "pages/learn/learn",
+      "style": { "navigationBarTitleText": "汉语搭子" }
+    },
+    {
+      "path": "pages/wrongbook/wrongbook",
+      "style": { "navigationBarTitleText": "错题本" }
+    },
+    {
+      "path": "pages/profile/profile",
+      "style": { "navigationBarTitleText": "我的" }
+    },
+    {
+      "path": "pages/login/login",
+      "style": { "navigationBarTitleText": "登录" }
+    }
+  ],
+  "globalStyle": {
+    "navigationBarTextStyle": "black",
+    "navigationBarTitleText": "汉语搭子",
+    "navigationBarBackgroundColor": "#F6F2EA",
+    "backgroundColor": "#F6F2EA"
+  },
+  "tabBar": {
+    "color": "#8C8168",
+    "selectedColor": "#AE332E",
+    "backgroundColor": "#FCFAF5",
+    "borderStyle": "black",
+    "list": [
+      { "pagePath": "pages/learn/learn", "text": "学习" },
+      { "pagePath": "pages/wrongbook/wrongbook", "text": "错题本" },
+      { "pagePath": "pages/profile/profile", "text": "我的" }
+    ]
+  }
+}

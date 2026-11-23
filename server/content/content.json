@@ -1,0 +1,175 @@
+{
+  "_note": "首版课程内容。字段说明见同目录 README.md。数组顺序就是学习顺序（sort 由导入脚本按位置写入）。",
+  "units": [
+    {
+      "key": "basic-char",
+      "level": "basic",
+      "type": "char",
+      "title": "象形入门",
+      "title_en": "Picture Characters",
+      "intro": "十二个字是从图画变来的，看形状就能猜到意思。",
+      "lessons": [
+        {
+          "key": "basic-char-nature",
+          "title": "自然五字",
+          "title_en": "Five from Nature",
+          "intro": "天上、地上、水里的五样东西。",
+          "est_minutes": 8,
+          "kinds": ["recognize", "pinyin", "meaning", "stroke", "listen"],
+          "points": [
+            { "key": "ri", "text": "日", "pinyin": "rì", "gloss": "sun", "hint": "太阳的样子，中间那一点是它的光。" },
+            { "key": "yue", "text": "月", "pinyin": "yuè", "gloss": "moon", "hint": "弯弯的一钩，就是月亮。" },
+            { "key": "shan", "text": "山", "pinyin": "shān", "gloss": "mountain", "hint": "三个山峰并排站着。" },
+            { "key": "shui", "text": "水", "pinyin": "shuǐ", "gloss": "water", "hint": "中间一条主流，两边是水花。" },
+            { "key": "huo", "text": "火", "pinyin": "huǒ", "gloss": "fire", "hint": "火苗往上跳，两边还有小火星。" }
+          ]
+        },
+        {
+          "key": "basic-char-body",
+          "title": "人的样子",
+          "title_en": "The Body",
+          "intro": "四个从人的形状来的字。",
+          "est_minutes": 8,
+          "kinds": ["recognize", "pinyin", "meaning", "stroke", "listen"],
+          "points": [
+            { "key": "ren", "text": "人", "pinyin": "rén", "gloss": "person", "hint": "一个人侧着站，两条腿分开。" },
+            { "key": "da", "text": "大", "pinyin": "dà", "gloss": "big", "hint": "人把手臂张开，看着就大了。" },
+            { "key": "xiao", "text": "小", "pinyin": "xiǎo", "gloss": "small", "hint": "三粒小沙子，很小。" },
+            { "key": "kou", "text": "口", "pinyin": "kǒu", "gloss": "mouth", "hint": "一张张嘴，外面是嘴唇。" }
+          ]
+        },
+        {
+          "key": "basic-char-position",
+          "title": "方位三字",
+          "title_en": "Position Words",
+          "intro": "说清楚东西在哪儿，先学这三个字。",
+          "est_minutes": 6,
+          "kinds": ["recognize", "pinyin", "meaning", "stroke", "listen"],
+          "points": [
+            { "key": "shang", "text": "上", "pinyin": "shàng", "gloss": "up, above", "hint": "一横上面再加一竖一横，东西在上面。" },
+            { "key": "xia", "text": "下", "pinyin": "xià", "gloss": "down, below", "hint": "跟「上」正好相反，东西在下面。" },
+            { "key": "zhong", "text": "中", "pinyin": "zhōng", "gloss": "middle, center", "hint": "一根杆子正穿过方框的正中间。" }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "basic-word",
+      "level": "basic",
+      "type": "word",
+      "title": "日常词汇",
+      "title_en": "Everyday Words",
+      "intro": "问候、数字、身边的东西 —— 第一周就能用上的十六个词。",
+      "lessons": [
+        {
+          "key": "basic-word-greet",
+          "title": "问候四词",
+          "title_en": "Greetings",
+          "intro": "见人、道谢、告别，先会这四句。",
+          "est_minutes": 8,
+          "kinds": ["recognize", "pinyin", "meaning", "listen"],
+          "points": [
+            { "key": "nihao", "text": "你好", "pinyin": "nǐ hǎo", "gloss": "hello", "hint": "见谁都先用这一句，什么时候都合适。" },
+            { "key": "xiexie", "text": "谢谢", "pinyin": "xièxie", "gloss": "thank you", "hint": "第二个「谢」读得轻一点、短一点。" },
+            { "key": "zaijian", "text": "再见", "pinyin": "zàijiàn", "gloss": "goodbye", "hint": "「再」是又一次，「见」是见面 —— 下次再见。" },
+            { "key": "laoshi", "text": "老师", "pinyin": "lǎoshī", "gloss": "teacher", "hint": "这里的「老」不是在说年纪，是尊敬。" }
+          ]
+        },
+        {
+          "key": "basic-word-number",
+          "title": "数字四字",
+          "title_en": "Numbers",
+          "intro": "最小的四个数字，笔画也最好记。",
+          "est_minutes": 6,
+          "kinds": ["recognize", "pinyin", "meaning", "listen"],
+          "points": [
+            { "key": "yi", "text": "一", "pinyin": "yī", "gloss": "one", "hint": "一横，就是一根手指。" },
+            { "key": "er", "text": "二", "pinyin": "èr", "gloss": "two", "hint": "两横，两根手指。" },
+            { "key": "san", "text": "三", "pinyin": "sān", "gloss": "three", "hint": "三横。注意别跟「二」看混。" },
+            { "key": "shi", "text": "十", "pinyin": "shí", "gloss": "ten", "hint": "一横一竖交叉，两只手数完了。" }
+          ]
+        },
+        {
+          "key": "basic-word-class",
+          "title": "教室里",
+          "title_en": "In the Classroom",
+          "intro": "上课天天见到的四样东西。",
+          "est_minutes": 8,
+          "kinds": ["recognize", "pinyin", "meaning", "listen"],
+          "points": [
+            { "key": "shu", "text": "书", "pinyin": "shū", "gloss": "book", "hint": "要读的东西。" },
+            { "key": "bi", "text": "笔", "pinyin": "bǐ", "gloss": "pen", "hint": "上面是竹，古代笔杆是竹子做的。" },
+            { "key": "tongxue", "text": "同学", "pinyin": "tóngxué", "gloss": "classmate", "hint": "「同」是一起，「学」是学习 —— 一起学习的人。" },
+            { "key": "xuesheng", "text": "学生", "pinyin": "xuésheng", "gloss": "student", "hint": "「生」在这里读得轻一点。" }
+          ]
+        },
+        {
+          "key": "basic-word-time",
+          "title": "时间与人",
+          "title_en": "Time and People",
+          "intro": "约时间、说朋友，四个高频词。",
+          "est_minutes": 8,
+          "kinds": ["recognize", "pinyin", "meaning", "listen"],
+          "points": [
+            { "key": "jintian", "text": "今天", "pinyin": "jīntiān", "gloss": "today", "hint": "现在这一天。" },
+            { "key": "mingtian", "text": "明天", "pinyin": "míngtiān", "gloss": "tomorrow", "hint": "睡一觉之后的那一天。" },
+            { "key": "zaoshang", "text": "早上", "pinyin": "zǎoshang", "gloss": "morning", "hint": "「上」读轻声。" },
+            { "key": "pengyou", "text": "朋友", "pinyin": "péngyou", "gloss": "friend", "hint": "两个「月」并排，原本指同门学友。" }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "basic-sentence",
+      "level": "basic",
+      "type": "sentence",
+      "title": "开口说话",
+      "title_en": "Start Speaking",
+      "intro": "四到十个字的短句，够你应付第一天的课。",
+      "lessons": [
+        {
+          "key": "basic-sentence-meet",
+          "title": "第一次见面",
+          "title_en": "First Meeting",
+          "intro": "自我介绍和打招呼。",
+          "est_minutes": 10,
+          "kinds": ["recognize", "pinyin", "meaning", "listen"],
+          "points": [
+            { "key": "wo-shi-xuesheng", "text": "我是学生", "pinyin": "wǒ shì xuésheng", "gloss": "I am a student", "hint": "「是」把两边连起来，跟英语的 am / is 一样。" },
+            { "key": "ni-hao-ma", "text": "你好吗", "pinyin": "nǐ hǎo ma", "gloss": "How are you?", "hint": "句尾的「吗」表示在问问题，不用改语序。" },
+            { "key": "xiexie-ni", "text": "谢谢你", "pinyin": "xièxie nǐ", "gloss": "Thank you", "hint": "比单说「谢谢」更近一点。" },
+            { "key": "hen-gaoxing-renshi-ni", "text": "很高兴认识你", "pinyin": "hěn gāoxìng rènshi nǐ", "gloss": "Nice to meet you", "hint": "第一次见面说完这句，气氛就松了。" }
+          ]
+        },
+        {
+          "key": "basic-sentence-confused",
+          "title": "听不懂的时候",
+          "title_en": "When You Don't Understand",
+          "intro": "这四句能救你一整个学期。",
+          "est_minutes": 10,
+          "kinds": ["recognize", "pinyin", "meaning", "listen"],
+          "points": [
+            { "key": "zhe-shi-shenme", "text": "这是什么", "pinyin": "zhè shì shénme", "gloss": "What is this?", "hint": "指着东西问，指哪儿问哪儿。" },
+            { "key": "wo-bu-dong", "text": "我不懂", "pinyin": "wǒ bù dǒng", "gloss": "I don't understand", "hint": "「不」放在动词前面，就是「不做什么」。" },
+            { "key": "qing-zai-shuo-yibian", "text": "请再说一遍", "pinyin": "qǐng zài shuō yí biàn", "gloss": "Please say that again", "hint": "「再」是又一次，「一遍」是走一遍。" },
+            { "key": "zhege-duoshao-qian", "text": "这个多少钱", "pinyin": "zhège duōshao qián", "gloss": "How much is this?", "hint": "买东西第一句。「少」在这里读轻声。" }
+          ]
+        },
+        {
+          "key": "basic-sentence-campus",
+          "title": "校园一天",
+          "title_en": "A Day on Campus",
+          "intro": "从进教室到说再见。",
+          "est_minutes": 10,
+          "kinds": ["recognize", "pinyin", "meaning", "listen"],
+          "points": [
+            { "key": "wo-qu-jiaoshi", "text": "我去教室", "pinyin": "wǒ qù jiàoshì", "gloss": "I'm going to the classroom", "hint": "「去」后面接要去的地方。" },
+            { "key": "zhe-shi-wo-de-shu", "text": "这是我的书", "pinyin": "zhè shì wǒ de shū", "gloss": "This is my book", "hint": "「的」表示所属，等于英语的 my。" },
+            { "key": "wo-xiang-he-shui", "text": "我想喝水", "pinyin": "wǒ xiǎng hē shuǐ", "gloss": "I want to drink water", "hint": "「想」后面接想做的事。" },
+            { "key": "mingtian-jian", "text": "明天见", "pinyin": "míngtiān jiàn", "gloss": "See you tomorrow", "hint": "下课跟同学说这句就够了。" }
+          ]
+        }
+      ]
+    }
+  ]
+}

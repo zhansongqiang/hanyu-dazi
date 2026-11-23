@@ -1,0 +1,40 @@
+# ── 凭据：绝不进仓库 ────────────────────────────────────────────
+# server/.env 里有本地 JWT_SECRET。虽然是 dev-only 的值，但一旦进了历史，
+# 后面推送/分享/截图都会带着它走，删文件也删不掉历史。
+.env
+.env.*
+!.env.example
+ecosystem.config.js
+
+# ── 数据库：本地是活文件，随时在写，提交它等于把二进制脏数据塞进 diff ──
+# WAL 模式下 .db 主文件只是快照，-wal 里有最新写入，三者必须一起忽略。
+*.db
+*.db-wal
+*.db-shm
+server/data/*
+!server/data/.gitkeep
+
+# ── 上传与日志 ─────────────────────────────────────────────────
+server/uploads/*
+!server/uploads/.gitkeep
+server/logs/*
+!server/logs/.gitkeep
+
+# ── 构建产物 ───────────────────────────────────────────────────
+# 前端 dist 由 npx uni build 生成，后端 dist 由 tsc 生成。
+# 部署脚本在本地打包上传，产物不需要进版本库。
+mobile/dist/
+server/dist/
+node_modules/
+
+# ── 打包中间物与截图 ───────────────────────────────────────────
+# 每次部署都会重写的 tar 包；shots 里的 png/txt 是取证记录，保留。
+shots/_*.tar.gz
+
+# ── Python / 编辑器 ────────────────────────────────────────────
+__pycache__/
+*.pyc
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

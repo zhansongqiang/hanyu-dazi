@@ -1,0 +1,17 @@
+node_modules/
+dist/
+logs/
+uploads/
+
+# SQLite 数据文件
+data/*.db
+data/*.db-shm
+data/*.db-wal
+data/*.db-journal
+
+# 环境变量
+.env
+
+# 系统
+.DS_Store
+Thumbs.db
