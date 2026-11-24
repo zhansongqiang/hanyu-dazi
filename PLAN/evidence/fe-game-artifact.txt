@@ -1,0 +1,258 @@
+# 证据 · 产物级验证（H5 打包产物上复跑 §8 的三条验收）
+
+泳道：fe-game
+单元：G1（单一 summary）、G3（印章灰态）、G5（分享链接游客可开）—— 即 §8 里 fe-game 名下的**全部三条**
+时间：2026-11-24 上午
+**取证方式：作者自测（fe-game 本人跑）—— 这不是「已验收」。**
+「已验收」按 `plan.html` §十二·七 只能由非作者写；本文件只是本路交出的可复核凭据。
+
+## 这一轮补的是什么
+
+前面的证据（`fe-game-render.txt` / `fe-game-g5-g6.txt` / `fe-game-edge.txt` 三份；`fe-game-g1-g4.txt` 没提这条）
+的「仍未验」里，**只剩同一条**没勾掉，三份文件里都写着同一句话：
+
+> 「**APK/H5 打包**：按编排者要求**本轮不跑构建**（内存吃紧，构建串行排队），所以没有产物级验证。」
+
+编排者随后给了「等构建排队，再跑产物级验证」这句，构建队列也空了（实测开工前机器上只有
+5173 dev + 8091 后端两个监听，**没有任何构建在跑**），所以本轮：
+
+1. 跑了一次 `uni build`（脚本名 `build:h5`，即 `uni build`）；
+2. 在**打包产物**（不是 dev server）上，用浏览器把 §8 的三条验收逐条硬断言了一遍。
+
+**结果：42 条断言，失败 0 条。**
+
+## 环境与方法
+
+### 1. 构建产物指纹（复核请比对这一节）
+
+    cd mobile && npm run build:h5          # → dist/build/h5/
+    md5(index.html) = 9aed44f8062359e911b6e11aca988dcc
+    assets/ 下资源 = 38 个（整个 dist/build/h5 共 40 个文件）
+    index.html 里引用的三个入口资源：
+      /assets/uni.6f779eef.css   → 200
+      /assets/index-B6iGICHS.js  → 200
+      /assets/index-D7GYRW7I.css → 200
+
+本路的 6 个页面 chunk（各**恰好 1 个**，都在产物里）：
+
+    pages-duel-duel.Z_assGNC.js     516c2cde5a7b8f175374f804bfead8d0
+    pages-duel-result.0LatqsNB.js   6b4675a21faa8dafeb2c572f96937b8f
+    pages-rank-rank.B7FMQr8N.js     fd98f14257839c91afbdfd5930a87bf5
+    pages-stamp-stamp.zZWPdNfX.js   f9b2c7659ed7556557c992048a9d398c
+    pages-team-team.C324o89U.js     0f6cb7584c7e7f152423be84cbfb351c
+    pages-user-user.CoydB0Bo.js     a6c25903b4acafc0cbae77b1fcb0eb9d
+
+### 2. 怎么做到"验产物但不碰共享库"
+
+产物是静态文件，但它要打后端。共享 dev 后端（8091）接着**共享库**，往里面写取证账号会污染
+别人的数据。做法是老三样（与 `fe-game-edge.txt` 同源）：
+
+    # ① 在线快照：不停任何进程、不碰共享库
+    cd server && npx tsx .snap-art.ts
+    # → SNAP_OK bytes=274432      （→ server/data/tmp-art.db，无 -wal 伴随文件）
+
+    # ② 隔离后端：自己的端口、自己的库副本、不跑 migration
+    PORT=8099 HOST=127.0.0.1 DB_FILENAME=./data/tmp-art.db AUTO_MIGRATE=false npx tsx src/index.ts
+
+    # ③ 静态分发产物，并把代理改指 8099
+    cd mobile && npx vite preview --config vite.preview.config.ts     # → 127.0.0.1:4173
+
+`vite preview` 默认继承 `server.proxy`，而 `vite.config.ts` 里的代理指向**共享的 8091** ——
+所以临时配置 `vite.preview.config.ts` 把 `/api`、`/audio`、`/uploads` 三个前缀重指到 8099。
+**本路全程没有向 8091 发过一个请求**，共享库与别人的文件一个字节没动。
+
+### 3. 断言怎么算数
+
+- 只统计 `new URL(u).pathname` 以 `/api/` 开头的请求（`/audio`、`/uploads` 不计入「N 个请求」）；
+- 同时监听 `console` 的 `type === 'error'` 与 `pageerror` —— Vue 的渲染期错误**只走 console.error**，
+  只监听 `pageerror` 会漏（这是本项目踩过的坑）；
+- 登录态注入：**直接写 `localStorage`**，原因见下面的 P0b。
+
+---
+
+## P0 · 产物自检（先证明"我验的是产物本身"）
+
+```
+[P0] GET / → http=200 bytes=843
+[P0] index.html 引用=["/assets/uni.6f779eef.css","/assets/index-B6iGICHS.js","/assets/index-D7GYRW7I.css"]
+  [PASS] 产物 index.html 能取到  ← http=200
+  [PASS] index.html 引用的资源全部 200  ← ["…css→200","…js→200","…css→200"]
+[P0] 产物资源总数=38
+[P0] 本路页面 chunk=[{"w":"pages-duel-duel","hit":1},{"w":"pages-duel-result","hit":1},
+     {"w":"pages-rank-rank","hit":1},{"w":"pages-stamp-stamp","hit":1},
+     {"w":"pages-team-team","hit":1},{"w":"pages-user-user","hit":1}]
+  [PASS] 本路 6 个页面 chunk 都在产物里（各恰好 1 个）
+```
+
+## P0b · 产物里 `window.uni` 是个空壳（**给后来人省一天**）
+
+注入登录态时第一版用了 `uni.setStorageSync`（dev server 下能用），在**产物里直接崩**：
+
+```
+TypeError: window.uni.setStorageSync is not a function      （第一次跑，exit=2）
+```
+
+探针实测产物页里 `window.uni` 的形状：
+
+```
+[P0b] {"hasUni":"object","uniKeys":0,"uniSample":[],"setStorageSync":"undefined","lsKeys":[]}
+```
+
+**结论**：H5 产物里 `window.uni` 是 `{}`（**0 个键**），`setStorageSync` 是 `undefined`；
+产物 bundle 里也**搜不到** `StorageSync` 字样。真实存储是**模块内部**的，落在 `localStorage` 上，
+写入格式是 uni 自己的包装：
+
+    localStorage.setItem(key, typeof v === 'string' ? v : JSON.stringify({ type: typeof v, data: v }))
+
+读的时候校验 `{type, data}` 再把 `data` 取出来。所以注入必须**绕开 `window.uni`**、
+按这个包装格式直接写 `localStorage`，键名就是 `token` 与 `userInfo`。
+
+顺带一个坑：uni 的 `<input>` 带 `placeholder-class` 时，**占位文字不是 `<input>` 的属性** ——
+它被渲染成一个**兄弟节点** `div.uni-input-placeholder`，内层 `<input class="uni-input-input">`
+上**没有** `placeholder` 属性。所以断言占位文字时读 `input[placeholder]` 会拿到 `null`
+（我第一版就是 `null`，靠单独写了一个探针 dump 真实 DOM 才定位到）。
+
+## P1 · §8「我的」页所有数字来自**一个** `GET /profile/summary`
+
+```
+[P1] 注入后 localStorage keys=["token={\"type\":\"string\",\"data\":\"eyJhbGciOiJIUzI1NiI",
+     "__probe_token=eyJhbGciOiJI","userInfo={\"type\":\"object\",\"data\":{\"id\":19,…"]
+[P1] 本页发往后端的请求（pathname 以 /api/ 开头者，全量）：
+     [{"path":"/api/profile/summary","auth":"Bearer …"}]
+  [PASS] /api/ 请求恰好 1 个  ← 实测 1 个：["/api/profile/summary"]
+  [PASS] 唯一那个是 /api/profile/summary
+  [PASS] 它带着 Authorization（确实是登录态）  ← Bearer …
+[P1] 页面：昵称="产物取证a" 段位="童生" 连击="0" 四格=["0","0","0","0%"]
+     行=["本周还没上榜","0 / 15 枚","和同学一起练","出题给同学答"]
+  [PASS] 昵称与接口一致 / 段位名与接口一致 / 连击数与接口一致
+  [PASS] 累计 XP 与接口一致 / 本周 XP 与接口一致 / 完成课时与接口一致 / 印章计数与接口一致
+```
+
+**"不是 N 个请求凑"这条 §8 原话，是在产物里数出来的**：整页只发了**一个** `/api/` 请求。
+
+## P5 · 换一个**非退化**账号再验一遍 P1（关键补强）
+
+P1 用的是全新账号，所有数字都是 0 —— 说实话，这种夹具**证明力弱**：就算前端把字段接错了，
+显示出来的也还是 0，照样能"通过"。所以追加 P5：往**临时库副本**里注入一组**每个数字都不相等**的夹具。
+
+```
+[P5] 夹具落库：xp 行=3 打卡=1 完成课时=3 作答=7 已得印章=1
+[P5] 接口：xp={"total":1230,"week":330,"today":30} 连击={"current":5,"max":9,…}
+     段位={"rankName":"秀才","level":2,"weekRank":2,"weekXp":330}
+     学习={"lessonsDone":3,"lessonsTotal":19,"itemsDone":5,"accuracy":0.57} 印章={"total":15,"earned":1}
+  [PASS] 夹具确实非退化（各数字两两不等且非 0）  ← {"total":1230,"week":330,"acc":0.57,"streak":5}
+[P5] 请求=["/api/profile/summary"] 四格标签=["累计 XP","本周 XP","完成课时 / 19","正确率"]
+[P5] 页面：昵称="产物取证b" 段位="秀才" 连击="5" 四格=["1230","330","3","57%"]
+     行=["第 2 名","1 / 15 枚","和同学一起练","出题给同学答"]
+  [PASS] 仍然只有 1 个 /api/profile/summary
+  [PASS] 段位名 = 接口 rankName（按**累计** XP 算）
+  [PASS] 连击 = streak.current
+  [PASS] 第 1 格「累计 XP」= xp.total（**不是** week）   ← 页面=1230 接口 total=1230 week=330
+  [PASS] 第 2 格「本周 XP」= xp.week（**不是** total）   ← 页面=330  接口 week=330
+  [PASS] 第 3 格「完成课时」= learn.lessonsDone        ← 页面=3
+  [PASS] 第 4 格「正确率」= round(accuracy*100)%       ← 页面=57%  接口 accuracy=0.57
+  [PASS] 课时格的分母 = learn.lessonsTotal             ← "完成课时 / 19"
+  [PASS] 印章行 = stamps.earned / total                ← "1 / 15 枚"
+```
+
+`1230 / 330 / 3 / 57%` 这四个数两两不等，且 `total≠week` —— **两个格子互换**这种错法会被抓出来。
+段位 `秀才` 是按**累计** 1230 算的（不是本周 330），也顺带证明了 `rankName` 取自 `xp.total`。
+
+## P2 · §8 分享链接 `/pages/duel/duel?code=xxx` 未登录能打开
+
+用一个**全新上下文**（`localStorage` 为空，实测 `keys=[]`）直接打开分享链接：
+
+```
+[P2] location=http://127.0.0.1:4173/#/pages/duel/duel?code=6WYF8H
+[P2] localStorage keys=[]
+[P2] 后端请求=[{"path":"/api/duels/6WYF8H","auth":null}]
+[P2] 页面：开场="《自然五字》" 副题="产物取证a 出的题，一共 25 道"
+     输入节点="input input.ipt" 占位文字="不登录也能答，写个名字就行"（取自 .uni-input-placeholder）
+     按钮="开始答题"
+  [PASS] 游客上下文没有任何 storage（真的未登录）  ← []
+  [PASS] 没被踢去登录页
+  [PASS] URL 还停在分享链接上
+  [PASS] 只发了 1 个 /api/duels/:code 请求
+  [PASS] 这个请求**不带** Authorization（真游客）  ← null
+  [PASS] 页面渲染出挑战开场（发起人 + 题数）
+  [PASS] 游客输入框占了「不登录也能答，写个名字就行」这句
+  [PASS] 游客拿到了「开始答题」入口
+```
+
+**诚实边界**：这一条在产物上验到的是**"门开得开"** —— 未登录不被踢、请求不带 token、游客入口在屏上。
+再往后的**答完 25 题并交卷**，在产物上**没有**重跑一遍；那条路径的证据是接口侧的
+（`fe-game-g5-g6.txt`：游客提交 `code:0`、成绩落库、第二次同名放行/异名拒绝），
+以及渲染侧的 `fe-game-render.txt`。复核时请照此理解覆盖面。
+
+## P3 · §8 印章页未得的章也要显示（灰态）
+
+P3a：全新账号（已得 0）。
+
+```
+[P3a] 后端请求=["/api/stamps"] 接口返回 15 枚（已得 0）
+[P3a] 页面：印章数=15 灰态数=15 分组=["单元通","笔画","连击","积少成多"] 页头="已得 0 / 15 枚"
+[P3a] 灰态实测计算样式：opacity=0.5  border-top-style=dashed  圈内字形集合=["未"]
+  [PASS] 印章页画出了全部 15 枚（不是 0 枚）
+  [PASS] 0 已得时全部是灰态
+  [PASS] 灰态样式真的生效（opacity .5 + 虚线框）
+  [PASS] 圈内字形全是「未」
+  [PASS] 四个分组都画出来了
+```
+
+P3b：往**临时库副本**插 1 行 `user_achievements`（`unit-basic-char` / 初识汉字），页面必须变成"14 灰 + 1 亮"。
+
+```
+[P3b] 接口：共 15 枚，已得 1
+[P3b] 页面：印章数=15 灰态数=14 非灰=1 页头="已得 1 / 15 枚" 字形集合=["印","未"]
+  [PASS] 接口侧确实变成 1 已得
+  [PASS] 混合态下仍画出全部 15 枚
+  [PASS] 恰好 1 枚不是灰态
+  [PASS] 已得画「印」、未得画「未」，两者同时在场
+```
+
+这条是 §8 那句「**不是只显示已得的**」的正面证明：**总数恒为 15**，得 0 时 15 个全灰、
+得 1 时 14 灰 1 亮 —— 灰态是**算出来的样式**（实测 `opacity=0.5` + `border-top-style:dashed`），
+不是"没数据就不画"。
+
+## P4 · 产物运行期错误
+
+```
+[P4] P1 错误数=0   P2 错误数=0   P3 错误数=0   P5 错误数=0
+  [PASS] 四个页面在产物里都没有 console.error / pageerror  ← 合计 0
+```
+
+（含 `console.error` 与 `pageerror` 两类 —— Vue 渲染期错误只走前者。）
+
+---
+
+## 汇总
+
+```
+[汇总] 断言 42 条，失败 0 条
+```
+
+四轮跑（第三、四轮为最终形态）退出码均为 **0**。
+
+## 本文件**没有**覆盖的（写明白，别让复核的人误以为都验过）
+
+- **真机 / WebView**：本轮浏览器是 **chromium 1208（桌面引擎）**，不是真机、不是 WebView。
+  本项目在移动端的已知坑（iOS 软键盘顶起、tabbar 遮挡底部按钮一类）**不在覆盖面内**，
+  详见 CLAUDE.md 里那条 iOS 清单。
+- **APK**：本轮验的是 **H5 产物**（`uni build` 的 h5 目标）。**没有**打 APK，也没有装到手机上跑。
+  "打包"在本项目里有两条腿（H5 dist / APK），本轮只走了 H5 那条。
+- **游客"答完并交卷"在产物上没重跑**：见 P2 的诚实边界，那条路径的证据在接口侧文件里。
+- **P3b / P5 的夹具是直接写库注入的**：写的是**临时库副本** `server/data/tmp-art.db`，
+  **共享库一个字节没动**。它们验的是"页面/接口对这份数据的反应"，不是"系统会自动产生这份数据"。
+- **并发**：所有断言都是单进程顺序跑，没有并发压测。
+
+## 临时文件清单（跑完即删）
+
+- `C:\Users\Admin\AppData\Local\Temp\feg-art\artifact.cjs` —— 本轮的取证脚本，**跑完即删**。
+- `C:\Users\Admin\AppData\Local\Temp\feg-art\probe-ph.cjs` —— 定位 `placeholder` 的 DOM 探针，**跑完即删**。
+- `D:\coding\hanyu-dazi\server\.snap-art.ts` —— 快照脚本，**跑完即删**。
+- `D:\coding\hanyu-dazi\mobile\vite.preview.config.ts` —— 指向 8099 的 preview 配置，**跑完即删**。
+- `D:\coding\hanyu-dazi\server\data\tmp-art.db`（含 `-wal`/`-shm`）—— 临时库副本，**跑完即删**。
+- `D:\coding\hanyu-dazi\mobile\dist\build\h5\` —— `uni build` 的产物。**留在原地不解**：
+  它是 `.gitignore` 里的构建输出，删了反而让"上面这些 md5 对不上"变成无法复核的事。
+- 收尾复核：共享 `8091`（PID 32800）与 `5173`（PID 26752）全程未动；
+  另一个泳道的 `server/data/_verify.db` **不是本路的**，本路没碰。

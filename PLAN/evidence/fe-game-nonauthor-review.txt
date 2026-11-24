@@ -1,0 +1,149 @@
+复核记录：非作者跑 bd 的渲染断言书（web.cjs）
+================================================================================
+复核人：fe-game 路（本路写集见 CONTRACT.md §5）
+日期：2026-11-24
+量具：web.cjs  md5 081e1700a2523848b12d5ac0cffa77c3  73536 B  mtime 10:54:58
+      起点：C:/Users/Admin/AppData/Local/Temp/hd-vfy
+      APP=5173(vite dev)  API=8124  被测库 fx-render（308 items / 20 lessons）
+台账：web.ledger.json（NDJSON，32 条），每条含 stage / suf / crit[] / aux[]
+
+本文件是**复核证据**，不是状态声明。状态词只写在 PLAN/*.md 里。
+--------------------------------------------------------------------------------
+§1 资格自核 —— 这是 bd 要求「你自己核过再签」的那句话
+
+· 本路 §5 独占写集：
+    mobile/src/pages/{profile,rank,stamp,duel,team,user}/**
+    mobile/src/api/{xp,checkin,stamp,duel,team,user}.ts
+    server/src/routes/{xp,checkin,duel,team}.ts
+· G1–G6 的产品面（profile / rank / stamp / duel / team 五页 + 对应 api + 对应 routes）
+  **全部落在本路写集内** ⇒ 本路就是 G1–G6 的作者
+  ⇒ 按 plan.html §十二·七「已验收**不许自己写**」，本路**不能**签 G1–G6。结论不变。
+· L1–L5 的产品面（learn / lesson / practice / wrongbook / stroke）
+  与本路写集**不相交** ⇒ 本路对 L1–L5 是**真非作者**（lg/l5 的实测读数见 §2）。
+· ⚠️ 但「谁写的」不能用 mtime 判。mtime 只记最后一次落盘：
+      PLAN/fe-learn.md 指出 lesson.vue 的 00:21:32 是 fe-learn 自己修 D1 落的盘，
+      若拿 mtime 当作者凭据，会把它误判成本路或编排者。**mtime 对这个规则是错的量具。**
+· ⚠️ ListAgents 把本会话登记为 `hanyu-dazi-ba`，与本路实际写集不符。
+      本路**不拿这个名号替自己争资格**；签不了 G1–G6 的结论不受影响。
+
+§2 独立读数（同一把尺 md5 081e1700）
+
+  lg  本路   2026-11-24T03:16:08Z  suf=158969  →  CRIT 124/124 通过；AUX 17 条
+      对照 be-api 2026-11-24T03:15:22Z  suf=107045  →  CRIT 124/124 通过；AUX 17 条
+      （两条轨迹独立、逐字相同；原文见 lg.mine.txt 与 beapi-lg.out.txt）
+  l5  （见 §2b）
+
+  §2b l5 —— 本路第一遍**作废**，第二遍干净
+  · 第一遍 11:16:22 起（PID 39060）。发现 be-api 于 11:15:02 起了整书八阶段扫描
+    （PID 39508，`for s in lg l5 g1 g2 g3 g4 g5 g6`），两者共用同一个 8124 夹具后端与
+    5173 dev。核过父进程后本路主动 TaskStop 让路。
+    ⇒ 那一遍产物 l5.mine.txt（10117 B，**无小结行**，停在 L5.*.12.3）**不是结果，不得引用**。
+  · 第二遍（be-api 11:20:59 收工后、机器只此一个 chromium 栈时重跑）：
+      l5  本路   2026-11-24T03:26:26Z  suf=474267  →  CRIT 150/150 通过；AUX 11 条；EXIT=0
+      对照 be-api 2026-11-24T03:20:36Z suf=123501 → CRIT 150/150 通过；AUX 11 条
+      另对照 bd 给的基线 150/150 · AUX 11  —— 三方读数一致（原文 l5.mine2.txt 17142 B）
+
+§3 ⚠️ 量具缺陷（这条比签字重要）：web.cjs:1222 读的是**别人的库**
+
+  web.cjs:1222  （G4 的两条库级断言都在这一段）
+      const db = new Database(ROOT + '/fx3/fixture.db', { readonly: true });
+  · 被测后端 8124 服务的是 **fx-render**，不是 fx3。
+  · 文件 mtime 是硬证据：
+      fx-render/fixture.db  mtime 11:20   ← 本次 G 阶段正在写它
+      fx3/fixture.db        mtime 10:20   ← 停在 296/19 的旧基线，本阶段没有写入
+  · 两库读数（本路直读 better-sqlite3）：
+      [fx3]        items=296  lessons=19  users=26  checkins=8
+      [fx-render]  items=308  lessons=20  users=28  checkins=12
+      （同目录 dbpath-check.out.txt（11:27，**非本路**产出）对同样两库打印了同形表，
+        读数与本路一致 ⇒ 这条缺陷已有第二个独立观察者。）
+  · G4 的 13 条 CRIT 里**只有 2 条**是库级：G4.n.db 与 G4.o.db。逐条看：
+      - G4.n.db「库里 checkins 只有 N 行」：读 fx3 的 user 9 → 1 行；fx-render 的 user 9 → 也是 1 行。
+        ⇒ 即便把库路径改对了，这条**也照样通过** ⇒ 对「一天一条」**零鉴别力**。
+          若被测代码真写了 0 行或 5 行，它依然绿 —— 因为它根本没读被测库。
+        ⇒ 判定：**结论为真、证据为空**（true conclusion / void evidence）。
+      - G4.o.db「checkins 上有唯一索引」：这是 schema 的**静态**属性，与被测的运行时写入无关。
+        且唯一索引的语义是**抛异常**（不是静默去重），它不能证明「重复打卡被幂等地收成一条」。
+        ⇒ 判定：**不能支撑它被挂上的那条验收标准**。
+  · 影响面（**说准，别 overclaim**）：
+      §8 给 G4 的验收标准是「打卡后连击 +1；重复打卡幂等（一天一条）」。
+      后半句「幂等/一天一条」**另有真凭据**：web.cjs:1213 的 `G4.l.api.idem`
+      （CRIT，API 级：`idem.created === false && xpEarned === 0`），
+      加上 G4.j.streak2 / G4.k.btn2 / G4.m.api2（CRIT，重复打卡后连击仍为 1）。
+      ⇒ **G4 的结论仍然成立**；问题只在**那 2 条库级断言不构成证据**（冗余缺陷，不是结论空缺）。
+      bd §七 表里的 g4 行（13/13）含 2 条虚条；PLAN/be-api.md 对 g4 的引用同样受影响。
+  · **要修**：把 1222 的路径改成跟随实际被测库（或从 API 侧探测），然后 g4 重跑。
+    根因逐字有据：书头第 7 行写「所有写入走 8124 夹具库（**fx3**/fixture.db）」——
+    写书时夹具确实是 fx3；10:39 夹具换成 fx-render 后，第 1222 行**没跟着改**，10:54 改书时也漏了。
+
+§4 覆盖缺口 —— bd 的渲染书 vs §8 fe-learn 的四条验收标准
+
+  §8 fe-learn ① learn→lesson→practice 走完整课 + 错题进 wrongbook …… 有 CRIT 覆盖 ✅
+  §8 fe-learn ② stroke 页 hanzi-writer **本地打包**（不走 CDN） …… 只有 AUX ❌
+      书里唯一的相干断言是 L4.x.ext「外部域名请求：（无）」，那是**负向**断言：
+      只能证「没有请求外部域名」，**不能证**「字形数据来自本地副本」。
+  §8 fe-learn ③ 所有页面 <template> 只有一个根元素 …… **书里完全没有** ❌
+      （grep -iE '单根|root.?node|non-element|template'  web.cjs → 0 命中）
+  §8 fe-learn ④ npx tsc / vite build 无新增错误 …… **书里完全没有**，且渲染书不可能覆盖 ❌
+      （grep -iE 'tsc|type-check|vue-tsc|noEmit'  web.cjs → 0 相干命中）
+  ⇒ lg + l5 全绿 **不等于** §8 fe-learn 可签。bd 的书是 L1–L5 的**渲染行为**书，不是 §8 的四条书。
+  ⇒ ②③④ 三条缺口的**本路补偿**分别见 §5 ② / §5 ③ / §5 ④（① 已由书的 CRIT 覆盖）。
+     注意补偿的**分量不同**：③ 是硬 PASS（静态检查器 5/5），④ 是硬读数（EXIT=2，仅既有 2 条），
+     ② 只有**静态**证据（无外链 + charDataLoader 接管），**没有**运行时证明「字形字节确实来自本地副本」。
+
+§5 本路补的三条（补偿 §4 的缺口，各自独立可复算）
+
+  · ③ 单根元素 —— 本路自写静态检查器 root-check.cjs（80 行，纯文本扫描，
+    剥注释、按嵌套深度取根 <template>、忽略 void 与自闭合）：
+      对 fe-learn 五个页面 learn / lesson / practice / wrongbook / stroke
+      → **5/5 PASS，每页恰好一个根 `<view>`**（原文：root-check.out.txt，EXIT=0）
+         五页 = learn/learn.vue · lesson/lesson.vue · practice/practice.vue
+                wrongbook/wrongbook.vue · stroke/stroke.vue
+  · ② 本地打包 —— 静态证据两件：
+      (a) mobile/src/pages/stroke/hanzi.ts:205-230 的 `charDataLoader` 接管了字形加载，
+          注释原文：「⛔ 这一行是「不走 CDN」的关键：默认实现会去 jsdelivr 拉字形」
+      (b) 全树 grep `cdn.|unpkg|jsdelivr|cdnjs|googleapis`：
+          只命中 hanzi.ts 的**两条注释**（12 行、213 行）与本地 vendor 副本
+          `mobile/src/pages/stroke/vendor/hanzi-writer.min.js` → **无任何实际外链**
+      (c) 另：fx-render 库内 `kind='stroke'` 的去重字符数 = **28**（本路复算，原文 stroke-verify.out.txt）：
+          `select kind, count(*) from items group by kind`
+            → recognize 80 / pinyin 80 / meaning 80 / listen 40 / **stroke 28**
+          `select count(distinct char) c from items where kind = 'stroke'`  → **c = 28**
+          与 PLAN/fe-learn.md L5 判据「库内 **28** 个描红字全部能描」在 308 基线上自洽。
+      ⚠️ 同目录 dbpath-check.out.txt（11:27，非本路）的 `strokeChars` 打印 {c:0}。
+          **那是该探针自己的查询写法问题，不是库的事实** —— 本路按上面两条 SQL 复算就是 28。
+          此处写明，以免被误读成「L5 的 28 是假的」。
+  · ④ 类型检查 —— **本路已亲自重跑**（原文 vuetsc.out.txt，195 B）：
+      命令：`cd mobile && NODE_OPTIONS=--max-old-space-size=1536 vue-tsc --noEmit`
+        （**加了 1536MB 硬堆上限**：跑不动就干净失败，不挤爆 peer 的 dev server）
+      读数：EXIT=2，**全文只有 2 行错误**，且都在同一个跨路文件里：
+        src/utils/request.ts(10,7): error TS2451: Cannot redeclare block-scoped variable 'BASE_URL'.
+        src/utils/request.ts(13,7): error TS2451: Cannot redeclare block-scoped variable 'BASE_URL'.
+      ⇒ 与本路记录在 PLAN/fe-game.md「类型检查终态」的基线**逐字相同**
+        ⇒ §8 ④ 要求的「无**新增**错误」**成立**：两条都在 fe-learn 的 utils/request.ts 里（CR-6），
+          早于本轮，且**不在本路任何文件**。
+      ⚠️ 边界（别 overclaim）：这两条**不是本路修的**，也**不该由本路判 fe-learn 的 ④ 通过** ——
+        本路只是「拿尺子量」，量出的结果是「本路文件零新增错误 + 全树只剩这 2 条既有错误」。
+        fe-learn 的 ④ 是否算过，仍由非 fe-learn 一方定。
+      · 上一轮的记录：本路 11:3x 曾因内存 94% 占用主动放弃这次测量并登记为**未跑**；
+        11:4x 内存回落到 85%（空闲 2471MB）后补跑，本条由「未跑」改为「已跑」。
+      ⛔ 另注：本轮补跑时 vite(5173) 与两个 tsx 后端仍在跑，堆上限就是为此设的；**未观察到 peer 进程异常**。
+
+§6 边界未达项
+
+  bd 要求「边界没走到的断言记『未证明』」。本轮 11 格**全绿、无 skip、无 boundary-unreached**，
+  所以这条**本轮不适用**。真正需要另记的是 §3 那 2 条「结论真、证据空」的虚条，
+  本路按二者分开记：**结论：已证明 / 证据：未证明**。
+
+§7 本路没有做的事（对应 bd 的两条诚实要求）
+
+  · 本路**没有**独立审过 bd 的断言书（web.cjs / be.cjs / check-tone.cjs / c-recheck.cjs）。
+    本路只**跑**了 web.cjs 的 lg 与 l5 两格，其余六格采信 be-api 的独立读数并已核对账本原文。
+    ⇒ 「没有独立第三方审书」这条，本路确认成立。
+  · 本路**没有**改 PLAN/fe-learn.md 一个字。
+  · 本路**在 PLAN/fe-game.md 里追加了一段「采信说明」**（无删改，只在第 26 行后插入新块），
+    内容 = ①指明六格「已验收」由非作者 be-api 于 11:26:01 落字；②本路是 G1–G6 作者、无权写该状态词；
+    ③本路只核引用（六段计数逐字对上、FAIL=0）；④§8 三条判据的 CRIT 断言原文；⑤旧量具 g4 两条虚条的提醒。
+    **没有动任何一格的状态词，没有删改 be-api 的补记原文。**
+    依据：bd 2026-11-24 口径 6 ——「要么补一行『本格由非作者 be-api 落字于 11:26:01，本路仅确认引用逐字无误』，
+    要么回退『待验收』并写明理由。两种我都接受，不许的是默默地既写又否。」
+    本路选前者。原写在此处的「一个字都没改」已随这次变更作废，故改写本行而不留旧文。

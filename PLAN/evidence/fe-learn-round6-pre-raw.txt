@@ -1,0 +1,78 @@
+# fe-learn 浏览器取证 · 第 6 组（D1 复验：lesson 页返回时是否刷新）—— 期望=broken
+时间：2026-11-23T16:20:41.676Z
+靶子：unit 5「上街办事」/ lesson 14「买东西」
+视口：390×844 dpr=2，isMobile + hasTouch；storageState = 取证账号（pfd5c0q / id=4）
+路径纪律：全程走**真实页面栈**（点卡片 → navigateTo / 点「回课时」→ navigateBack），不用 page.goto 模拟返回。
+
+## A 前置读数（只读）
+  learn 页「上街办事」单元卡：barW="0%"
+    文案="上街办事 | 进阶 | Out and About | 买东西、坐车、看天气 —— 出了校门马上就用到。 | 词语 · 3 课 · 36 题 | 已学 0/3"
+  lesson 页「买东西」卡（全新挂载）：badge="未开始" barW="0%"
+    文案="一 | 买东西 | 未开始 | Shopping | 问价钱之前，先认识地方和价钱。 | 8 分钟 · 12 题 | 描红 | 开始"
+  ⇒ 前置条件（靶子必须还是「未开始 / 0%」）：✅ 成立
+
+## C 真实页面栈（learn → 点单元 → 点课时 → 答完 → 点「回课时」）
+  learn 页「上街办事」单元卡（答题前）：barW="0%"
+  点单元卡：{"cx":195,"cy":446.1,"w":348,"h":167,"text":"上街办事进阶Out and About买东西、坐车、看天气 —— 出了校门马上就","hitSelf":true,"inView":true,"inTabbar":false}
+  点单元后 URL：http://127.0.0.1:5173/#/pages/lesson/lesson?unitId=5
+  路由栈：["pages/learn/learn","pages/lesson/lesson","pages/lesson/lesson"]
+  lesson 页「买东西」卡（进答题前）：badge="未开始" barW="0%"
+  ⇒ 进答题前仍是「未开始 / 0%」：✅
+  点「买东西」卡的 .card-top：{"cx":195,"cy":280.3,"w":313,"h":80,"hitSelf":true,"inView":true}
+  点课时后 URL：http://127.0.0.1:5173/#/pages/practice/practice?lessonId=14
+  课时：买东西　题量：12　题型：{"recognize":4,"pinyin":4,"meaning":4}
+
+   1 | recognize | 点 "shāngdiàn"          | fb hd-card fb-ok | 1/12 | 8%
+   2 | pinyin    | 点 "商店"                 | fb hd-card fb-ok | 2/12 | 17%
+   3 | meaning   | 点 "shop"               | fb hd-card fb-ok | 3/12 | 25%
+   4 | recognize | 点 "chāoshì"            | fb hd-card fb-ok | 4/12 | 33%
+   5 | pinyin    | 点 "超市"                 | fb hd-card fb-ok | 5/12 | 42%
+   6 | meaning   | 点 "supermarket"        | fb hd-card fb-ok | 6/12 | 50%
+   7 | recognize | 点 "piányi"             | fb hd-card fb-ok | 7/12 | 58%
+   8 | pinyin    | 点 "便宜"                 | fb hd-card fb-ok | 8/12 | 67%
+   9 | meaning   | 点 "cheap"              | fb hd-card fb-ok | 9/12 | 75%
+  10 | recognize | 点 "guì"                | fb hd-card fb-ok | 10/12 | 83%
+  11 | pinyin    | 点 "贵"                  | fb hd-card fb-ok | 11/12 | 92%
+  12 | meaning   | 点 "expensive"          | fb hd-card fb-ok | 12/12 | 100%
+
+## C1 结算页
+  {"num":"12","den":"/ 12","word":"这一课过了","sub":"第一次完成这一课","rows":["最好成绩12 / 12","课时奖励+20 XP","连续打卡2 天"],"acts":["再练一次","下一课","回课时"]}
+  finish 回包：{"lessonId":14,"status":"done","bestScore":12,"bestTotal":12,"firstDone":true,"xpEarned":20,"checkin":{"created":false,"currentStreak":2,"xpEarned":0},"nextLessonId":15,"unitDone":false}
+
+## C2 点「回课时」（quit → uni.navigateBack）
+  按钮读数：{"cx":195,"cy":616.8,"w":348,"h":53,"text":"回课时","hitSelf":true,"inView":true,"inTabbar":false}
+  回来 URL：http://127.0.0.1:5173/#/pages/lesson/lesson?unitId=5
+  路由栈：["pages/learn/learn","pages/lesson/lesson","pages/lesson/lesson"]
+  uni-page 实例数：1
+    [0] route=pages/lesson/lesson display=block lessonCards=3 unitCards=0 badges=["未开始","未开始","未开始"] bars=["0%","0%","0%"]
+    可见 .lesson-card badge="未开始" barW="0%"
+    可见 .lesson-card badge="未开始" barW="0%"
+    可见 .lesson-card badge="未开始" barW="0%"
+
+  ▶ 用户停在这一页看到的那张「买东西」卡：badge="未开始" barW="0%"
+     文案="一 | 买东西 | 未开始 | Shopping | 问价钱之前，先认识地方和价钱。 | 8 分钟 · 12 题 | 描红 | 开始"
+     同一时刻 API：GET /units/5/lessons 里 lesson 14 = status=undefined（进答题页时读到的那份）
+
+## C3 退回 learn 页（单元进度条那一半）
+  nav 返回按钮读数：{"cx":18,"cy":22,"w":26,"h":26,"text":"","hitSelf":true,"inView":true,"inTabbar":false}
+  回到 URL：http://127.0.0.1:5173/#/pages/learn/learn
+  learn 页「上街办事」单元卡（答题后）：barW="33%"
+    文案="上街办事 | 进阶 | Out and About | 买东西、坐车、看天气 —— 出了校门马上就用到。 | 词语 · 3 课 · 36 题 | 已学 1/3"
+  ⇒ 单元进度条 "0%" → "33%"：✅ 上升
+
+## 裁决
+  ✅ **变异测试转红**：真实路径下，结算成功、API 已是 done，用户看到的「买东西」卡仍是 "未开始" / "0%"
+     —— 这正是 D1 的形态（lesson.vue 只有 onLoad，navigateBack 回来不重跑取数）。
+  L4 另一半（单元进度条）：✅ 上升
+
+## 附：本轮 HTTP
+  13 条 POST：
+    12 × /api/attempts
+    1 × /api/lessons/14/finish
+  非 2xx：0 条 ✅
+
+## 附：控制台 / 备注
+[console.error] Failed to load resource: the server responded with a status of 404 (Not Found)
+
+## 结论
+  ✅ 全项通过

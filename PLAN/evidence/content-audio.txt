@@ -1,0 +1,37 @@
+# 证据 · C1 40 个音频
+
+单元：C1 40 个音频（泳道 content，里程碑 M2，计划 Day 2）
+验收标准：`content/audio/` 40 个 mp3；`select count(*) from items where kind='listen'` = 40
+验收人：orchestrator（**非作者**）
+时间：2026-11-23
+结论：**通过**
+
+## 命令 1 —— 音频文件数
+
+    $ ls /d/coding/hanyu-dazi/server/content/audio | wc -l
+    40
+
+    $ ls /d/coding/hanyu-dazi/server/content/audio | head -5
+    bi.mp3
+    da.mp3
+    er.mp3
+    hen-gaoxing-renshi-ni.mp3
+    huo.mp3
+
+## 命令 2 —— 库里的听音题数（只读，readonly 打开）
+
+    --- items by kind ---
+      listen       40
+      meaning      76
+      pinyin       76
+      recognize    76
+      stroke       28
+      TOTAL        296
+
+## 判定
+
+§8 写的两条（音频 40 个、`kind='listen'` = 40）**逐字命中**。契约 §6 之前记的"听音 0 道"已消除。
+
+## 仍未验的部分
+
+`import-content.ts` 的**幂等性**（重跑两遍、第二遍「新增 0，更新 N」）属于 **C4**，不在本单元内，未测。

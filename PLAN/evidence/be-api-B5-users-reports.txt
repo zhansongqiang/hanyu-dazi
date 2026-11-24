@@ -1,0 +1,58 @@
+# B5 验收断言 · 举报与公开资料（GET /users/:id、POST /reports、reports 表迁移）
+
+生成时间(本地)   : 2026-11-23 22:46:55
+目标             : http://127.0.0.1:8099（本地开发后端，仅 loopback）
+数据库           : C:\Users\Admin\AppData\Local\Temp\hd-beapi-fixture-b9eEN9\fixture.db（夹具一次性库，与后端同一文件；脚本用只读连接）
+夹具目录         : C:\Users\Admin\AppData\Local\Temp\hd-beapi-fixture-b9eEN9
+测试账号         : id=1 username=beapi_probe nickname=beapi 断言探针
+鉴权             : 夹具模式：经 POST /auth/register 现建探针账号并取回 token（该端点无限流，回避 5/min 的 /auth/login）
+被断言的进程     : pid=25216，启动于 2026-11-23 22:46:54，监听 127.0.0.1:8099
+源码 mtime(UTC)  : 
+                   src/routes/content.ts = 2026-11-23 08:55:07
+                   src/routes/attempts.ts = 2026-11-23 08:58:58
+                   src/routes/wrongbook.ts = 2026-11-23 08:57:18
+                   src/routes/progress.ts = 2026-11-23 08:57:35
+                   src/routes/index.ts = 2026-11-23 08:49:23
+                   src/app.ts = 2026-11-23 08:49:25
+                   src/services/item.ts = 2026-11-23 08:56:57
+断言人           : be-api（本单元作者）。本文件是**自测取证**，不是验收结论 ——
+                   状态仍停在「待验收」，须由非作者复核后才可改「已验收」。
+脚本             : %TEMP%\hd-beapi-assert.cjs（临时脚本，不入仓库）
+
+【前置数据构造】
+本单元会真实写入 reports 表 1 行（reporter_id=1，status=open）—— 这是本表的首个写入，可作为「迁移真的能落数据」的实证。
+DB 起点计数：reports=0
+
+== B5 · 举报与公开资料（M5 Day 5） ==
+  [PASS] GET /api/users/1 → HTTP 200 且 code=0   → HTTP 200 code=0
+  GET /users/1 原文: {"id":1,"username":"beapi_probe","nickname":"beapi 断言探针","avatarUrl":null,"createdAt":"2026-11-23 22:46:55","rankName":"童生","xpTotal":55,"lessonDone":1,"stampsEarned":0}
+  [PASS] GET /users/:id 的 data（§4.9 恰好九项）：字段集与契约逐字一致   → 期望 9 项 / 实得 9 项
+  [PASS] 字段数恰好为 9（不多不少）   → 9
+  [PASS] 不含 password_hash / status / 任何 token（不是 ...user 展开）   → ["avatarUrl","createdAt","id","lessonDone","nickname","rankName","stampsEarned","username","xpTotal"]
+  [PASS] xpTotal / rankName 与 xp_events 实算一致   → [55,55,"童生"]
+  [PASS] lessonDone / stampsEarned 与库内一致   → [1,1,0,0]
+  [PASS] createdAt 为可读的本地时间字符串   → 2026-11-23 22:46:55
+  [PASS] 不存在的用户 → 404 且 code=1   → HTTP 404 code=1
+  [PASS] 非法 id /users/abc → 400 且 code=1   → HTTP 400 code=1
+  [PASS] POST /api/reports → HTTP 200 且 code=0   → HTTP 200 code=0
+  POST /reports 原文（请求体夹带 reporterId:999）: {"id":1}
+  [PASS] POST /reports 的 data：字段集与契约逐字一致   → 期望 1 项 / 实得 1 项
+  库内最新 reports 行: {"id":1,"reporter_id":1,"target_type":"user","target_id":1,"reason":"验收自测举报","detail":"be-api 本地断言用，非真实举报","status":"open","created_at":"2026-11-23 22:46:55"}
+  [PASS] 【关键】reporter_id 取自 token，请求体里的 reporterId:999 未被采信   → 1
+  [PASS] target_type / target_id 落库正确   → ["user",1]
+  [PASS] reason / detail 落库正确   → ["验收自测举报","be-api 本地断言用，非真实举报"]
+  [PASS] status 默认 'open'   → open
+  [PASS] created_at 是本地时间（localNowStr），不是 UTC/毫秒   → 2026-11-23 22:46:55
+  [PASS] reason 缺失 → 400 且 code=1   → HTTP 400 code=1
+  [PASS] reason 31 字（>30）→ 400 且 code=1   → HTTP 400 code=1
+  [PASS] targetType 只允许 user|duel：传 'lesson' → 400 且 code=1   → HTTP 400 code=1
+  [PASS] detail 201 字（>200）→ 400 且 code=1   → HTTP 400 code=1
+  reports 表列（PRAGMA table_info）: ["id","reporter_id","target_type","target_id","reason","detail","status","created_at"]
+  [PASS] reports 表 8 列与 §4.9 迁移定义逐列一致   → ["id","reporter_id","target_type","target_id","reason","detail","status","created_at"]
+  reports 索引: ["idx_reports_target"]
+  [PASS] 存在索引 idx_reports_target   → ["idx_reports_target"]
+  [PASS] 索引列顺序为 (target_type, target_id)   → ["target_type","target_id"]
+  src/migrations 目录: ["20261123090000_reused_core.ts","20261123150000_course_core.ts","20261123160000_content_keys.ts","20261123160001_items_hint.ts","20261123170000_reports.ts"]
+  [PASS] 迁移文件 20261123170000_reports.ts 存在（be-api 写的唯一新表）   → 目录内共 5 个迁移
+  · 迁移目录解析：database.ts 用 path.join(__dirname, "..", "migrations")，源码直跑时 __dirname=server/src/config → server/src/migrations（正确）；编译后 dist/config → dist/migrations（也正确）。
+  · ⚠️ 部署提醒：dist/migrations 目前只有 3 个 .js（20261123090000 / 20261123150000 / 20261123160000），缺 items_hint 与 reports 两个迁移的编译产物 —— 部署波次必须先 npx tsc 再启动，否则线上库缺 items.hint 列与 reports 表。

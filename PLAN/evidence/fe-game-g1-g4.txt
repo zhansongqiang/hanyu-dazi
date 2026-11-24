@@ -1,0 +1,141 @@
+# 证据 · G1「我的」页单一 summary / G2 排行榜 / G3 印章页 / G4 打卡与连击
+
+泳道：fe-game
+单元：G1、G2、G3、G4（里程碑 M3，计划 Day 3）
+时间：2026-11-23 22:33
+**取证方式：作者自测（fe-game 本人跑）—— 这不是「已验收」。**
+「已验收」按 `plan.html` §十二·七 只能由非作者写；本文件只是本路交出的可复核凭据。
+
+## 环境与方法
+
+- 起**隔离实例**，不碰共享的 8091 dev server（那个进程 PID 32800 全程没动）：
+
+      cd server && PORT=8099 AUTO_MIGRATE=false HOST=127.0.0.1 npx tsx src/index.ts
+      # 日志： [DB] 连接成功 (client=sqlite3, file=./data/hanyu-dazi.db)
+      #        [Server] 汉语搭子 后端启动: http://127.0.0.1:8099
+
+- 取证账号走 `POST /auth/register`（**不走 `/login`** —— 那个接口有 loginLimiter 每分钟 5 次，
+  反复 curl 会打满限额，正是 CLAUDE.md 里记着的坑）。
+- 脚本 `.smoke-game.ts` 是临时文件，跑完即删；收尾用 knex 把临时账号的每一张关联表都清掉。
+
+## 命令
+
+    cd server && npx tsx .smoke-game.ts
+
+## 输出（逐字）
+
+    [注册] id=7 code=0
+    [G1] GET /profile/summary → http=200 code=0
+    [G1] 顶层键=["learn","rank","stamps","streak","todayCheckedIn","user","xp"]
+    [G1] 全量={"user":{"id":7,"username":"fg_g_387828","nickname":"取证丙","avatarUrl":null},"xp":{"total":0,"week":0,"today":0},"streak":{"current":0,"max":0,"lastCheckinDate":null},"rank":{"rankName":"童生","level":1,"weekRank":null,"weekXp":0},"stamps":{"total":15,"earned":0},"learn":{"lessonsDone":0,"lessonsTotal":19,"itemsDone":0,"accuracy":0},"todayCheckedIn":false}
+    [G4] 打卡前 status → {"checkedIn":false,"checkDate":"2026-11-23","currentStreak":0,"maxStreak":0,"lastCheckinDate":null}
+    [G4] 第一次打卡 → code=0 data={"created":true,"checkDate":"2026-11-23","currentStreak":1,"maxStreak":1,"xpEarned":5}
+    [G4] 重复打卡 → code=0 data={"created":false,"checkDate":"2026-11-23","currentStreak":1,"maxStreak":1,"xpEarned":0}
+    [G4] 打卡后 status → {"checkedIn":true,"checkDate":"2026-11-23","currentStreak":1,"maxStreak":1,"lastCheckinDate":"2026-11-23"}
+    [G4] XP 流水 → code=0 total=1 rows=[{"id":16,"amount":5,"reason":"streak","refType":"checkin","refId":null,"note":"连续打卡第 1 天","createdAt":"2026-11-23 22:33:07"}]
+    [G1] 打卡后 summary.xp={"total":5,"week":5,"today":5} streak={"current":1,"max":1,"lastCheckinDate":"2026-11-23"} todayCheckedIn=true
+    [G1] 打卡后 summary.rank={"rankName":"童生","level":1,"weekRank":2,"weekXp":5} learn={"lessonsDone":0,"lessonsTotal":19,"itemsDone":0,"accuracy":0} stamps={"total":15,"earned":0}
+    [G3] GET /stamps → code=0 总数=15 已得=0 未得=15
+    [G3] 未得样例=[{"code":"unit-basic-char","name":"初识汉字","description":"学完「象形入门」的全部课时","kind":"unit","sort":1,"earned":false,"unlockedAt":null},{"code":"unit-basic-word","name":"生活词汇","description":"学完「日常词汇」的全部课时","kind":"unit","sort":2,"earned":false,"unlockedAt":null}]
+    [G3] 行键=["code","description","earned","kind","name","sort","unlockedAt"]
+    [G3] POST /stamps/check → code=0 data={"unlocked":[],"total":15,"earned":0}
+    [G2] 注入前周榜 → code=0 键=["list","me","weekEnd","weekStart"] 榜单=[{"rank":1,"userId":4,"nickname":"取证账号","avatarUrl":null,"weekXp":97,"rankName":"童生","isMe":false},{"rank":2,"userId":7,"nickname":"取证丙","avatarUrl":null,"weekXp":5,"rankName":"童生","isMe":true}] me={"rank":2,"weekXp":5,"rankName":"童生"}
+    [G2] 注入后周榜 → code=0 list=[{"rank":1,"userId":7,"nickname":"取证丙","avatarUrl":null,"weekXp":505,"rankName":"秀才","isMe":true},{"rank":2,"userId":4,"nickname":"取证账号","avatarUrl":null,"weekXp":97,"rankName":"童生","isMe":false}] me={"rank":1,"weekXp":505,"rankName":"秀才"}
+    [G2] GET /rank/rank-of/7 → code=0 data={"userId":7,"nickname":"取证丙","rank":1,"weekXp":505,"rankName":"秀才","rankLevel":2}
+    [G2] 周榜的 rankName 与 summary 是否同源 → summary.rank={"rankName":"秀才","level":2,"weekRank":1,"weekXp":505}
+    [G2] limit=1 → list 条数=1
+    [清库] xp_events=2 checkins=1 user_streaks=1 user_achievements=0 attempts=0 lesson_progress=0 users=1
+    [清库] 残留用户=0
+
+（G2 的 505 XP 是把 500 XP 直接写进 `xp_events` 造的：XP 的唯一真源就是那张表，
+周榜按 `created_at` 求和，所以这样注入等价于「这人真的挣了 500 XP」。）
+
+## 逐条对照 §8 的验收标准
+
+**G1「所有数字来自一个 `GET /profile/summary`，不是 N 个请求凑」**
+- 接口侧：一次请求返回 `user / xp / streak / rank / stamps / learn / todayCheckedIn` 七块，实测一次到位。
+- 前端侧：`mobile/src/pages/profile/profile.vue` 里取数点只有 `loadSummary()` 一处调 `profileApi.summary()`；
+  `doCheckin()`（用户手动动作）完成后也是**复用同一个 summary 刷新**，没有追加第二个请求。
+  自检命令：`grep -n "profileApi\.\|api\." mobile/src/pages/profile/profile.vue`。
+- 打卡后数字确实跟着动（`xp.total 0→5`、`streak.current 0→1`、`todayCheckedIn false→true`、
+  `weekRank null→2`）—— 说明它不是把某几个值写死的。
+
+**G2 排行榜**：`rank/week` 的四块（`weekStart/weekEnd/list/me`）与 §4.6 逐字一致；
+行 7 字段（`rank,userId,nickname,avatarUrl,weekXp,rankName,isMe`）逐字一致；
+`limit=1` 生效；`me` 在榜内时给（此例两人都在榜内；「本周 XP 为 0 未上榜 → `me:null`」这一支
+第一轮**没造出来**，已在下面的「第二轮补测」里造出来并实测通过）。
+`rankName` 按**累计** XP 判段位、`weekXp` 按本周求和 —— 注入 505 后 `rankName` 从「童生」跳「秀才」（阈值 500），
+与 §4.5 的段位表一致。
+
+**G3 印章页未得的章也要显示**：`GET /stamps` 返回 **15 条，全部 15 条 `earned:false`**——
+即「一个都没得」时不是空数组，未得的章带着 `earned:false / unlockedAt:null` 照样下发，前端据此画灰态。
+行键恰好 §4.7 的 7 个字段。
+
+**G4 打卡与连击**：第一次 `created:true, currentStreak:1, xpEarned:5`；
+**重复打卡 `created:false` 且 code 仍为 0（不报错），连击停在 1** —— 幂等成立，
+且一天只有一条 `checkins`（`POST` 走的是 `user_id + check_date` 查重）。
+
+## 第二轮补测（2026-11-23 22:52）—— 补 G4 跨天连击与 G2 榜外 `me`
+
+第一轮漏掉了 G4 验收标准里最要紧的那条语义：验收标准写的是「打卡后连击 **+1**」，
+而第一轮只观测到 `0→1`（人生第一次打卡）与同日幂等 —— 真正的「+1」（跨天 `1→2`）没测。
+本轮用**同一种隔离实例**（8099）补上，脚本 `.smoke-streak.ts`，跑完即删。
+
+**方法（重要，别误读）**：连击的判定只看 `user_streaks.last_checkin_date` 与 `daysBetween()`，
+所以"历史上打过卡"这件事**直接写库构造**，不是真等一天。脚本里把注入的假历史原样打印出来了。
+三个场景各用一个新注册的账号，互不干扰。
+
+### 输出（逐字）
+
+    [就绪] 8099 已响应
+    [今天] 2026-11-23  昨天=2026-11-22  三天前=2026-11-20
+    [A] 注入假历史 current_streak=1 max=1 last_checkin_date=2026-11-22
+    [A] 打卡 → code=0 data={"created":true,"checkDate":"2026-11-23","currentStreak":2,"maxStreak":2,"xpEarned":5}
+    [A] XP 流水首条 note=「连续打卡第 2 天」
+    [B] 注入假历史 current_streak=5 max=5 last_checkin_date=2026-11-20
+    [B] 打卡 → code=0 data={"created":true,"checkDate":"2026-11-23","currentStreak":1,"maxStreak":5,"xpEarned":5}
+    [B] 同日第二次 → code=0 data={"created":false,"checkDate":"2026-11-23","currentStreak":1,"maxStreak":5,"xpEarned":0}
+    [C] 周榜 code=0 键=["weekStart","weekEnd","list","me"]
+    [C] me=null  我在 list 里吗=false  list 条数=4
+    [C] limit=200 时我在 list 里吗=false
+    [清库] 残留用户=0
+
+### 判定
+
+- **G4 跨天 +1 成立**：昨天(`2026-11-22`)打过、`current_streak=1` → 今天打卡得
+  `currentStreak:2`。且这个 2 **真的流进了 XP 备注**（`note="连续打卡第 2 天"`），
+  说明连击值是这一趟算出来的，不是从哪儿读出来的旧值。
+- **G4 断签归 1 成立**：上次打卡在 3 天前（`gap=3 > 1`）→ `currentStreak` 从 5 归 **1**，
+  但 **`maxStreak` 保留 5**（历史最好成绩不清零）—— 这正是 `max(max_streak, current)` 的预期行为。
+- **G4 同日幂等在新账号上同样成立**：B 的第二次打卡 `created:false`、`xpEarned:0`、连击不变。
+- **G2 榜外 `me:null` 成立**：全新账号（本周 0 XP）`GET /rank/week` → **`me:null`**，
+  且**确实不在 `list` 里**（`limit` 默认与 `limit=200` 各测一次都是 `false`），
+  不是"在 list 里但 me 忘了填"。榜上当时有 4 人（其他泳道的取证账号），本路一个没动。
+
+### 清库
+
+`[清库] 残留用户=0`。三个账号的 `checkins / user_streaks / xp_events / user_achievements /
+attempts / lesson_progress` 全部按 `user_id` 删净，随后独立查询复核共享库仍是
+`users=[xiaoming(1), pfd5c0q(4)]`、`duels=0 teams=0 team_members=0 user_achievements=0`。
+
+## 清库复核
+
+`[清库] 残留用户=0`。之后直接查共享库：
+
+    users=[{"id":4,"username":"pfd5c0q"},{"id":1,"username":"xiaoming"}]
+    duels=0 teams=0 team_members=0
+    checkins=[{"id":2,"user_id":4,...}]   user_streaks=[{"user_id":4,...}]   attempts(user 4)=8   xp_events(user 4)=10
+
+剩下的 `user_id=4`(`pfd5c0q` / 昵称「取证账号」) **不是本路的**：它是 fe-learn 的取证账号，
+见 `PLAN/evidence/fe-learn-l1-l5.txt:148`，本路**没有动它**（连带它名下那 8 条 attempts / 10 条 xp_events 都留着）。
+
+## 仍未验的部分（写明白，别让复核的人误以为都验过）
+
+- ~~**G2 前端**~~ / ~~**G3 前端**~~：**已在 `evidence/fe-game-render.txt` 补齐**
+  （2026-11-23 当晚，浏览器硬断言）。G2：`rank` 页榜单里我那一行带 `row-me`、
+  计算样式底色 `rgb(239,233,220)` 与他人 `rgba(0,0,0,0)` 不同，名次进前三时台子描边 `rgb(174,51,46)`；
+  G3：印章页渲染出 **15 枚**、**15 枚全带灰态**、实测 `opacity=0.5` + `border-top-style=dashed`、
+  圈内字形 `"未"`、页头「已得 0 / 15 枚」。该轮 40 条断言 0 失败。
+- ~~**G4 跨天连击**~~ / ~~**G2 榜外 `me`**~~：**已在「第二轮补测」里补齐**（见上）。
+  注意那条的连击历史是**直接写库构造**的，不是真等了一天 —— 它验的是连击**算法**对
+  `last_checkin_date` 的反应，不是"系统跨天会自动跑什么定时任务"（本项目也没有这种定时任务）。

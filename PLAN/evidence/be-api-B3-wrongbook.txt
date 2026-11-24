@@ -1,0 +1,64 @@
+# B3 验收断言 · 错题本接口（GET /wrongbook、POST /wrongbook/practice）
+
+生成时间(本地)   : 2026-11-23 22:46:55
+目标             : http://127.0.0.1:8099（本地开发后端，仅 loopback）
+数据库           : C:\Users\Admin\AppData\Local\Temp\hd-beapi-fixture-b9eEN9\fixture.db（夹具一次性库，与后端同一文件；脚本用只读连接）
+夹具目录         : C:\Users\Admin\AppData\Local\Temp\hd-beapi-fixture-b9eEN9
+测试账号         : id=1 username=beapi_probe nickname=beapi 断言探针
+鉴权             : 夹具模式：经 POST /auth/register 现建探针账号并取回 token（该端点无限流，回避 5/min 的 /auth/login）
+被断言的进程     : pid=25216，启动于 2026-11-23 22:46:54，监听 127.0.0.1:8099
+源码 mtime(UTC)  : 
+                   src/routes/content.ts = 2026-11-23 08:55:07
+                   src/routes/attempts.ts = 2026-11-23 08:58:58
+                   src/routes/wrongbook.ts = 2026-11-23 08:57:18
+                   src/routes/progress.ts = 2026-11-23 08:57:35
+                   src/routes/index.ts = 2026-11-23 08:49:23
+                   src/app.ts = 2026-11-23 08:49:25
+                   src/services/item.ts = 2026-11-23 08:56:57
+断言人           : be-api（本单元作者）。本文件是**自测取证**，不是验收结论 ——
+                   状态仍停在「待验收」，须由非作者复核后才可改「已验收」。
+脚本             : %TEMP%\hd-beapi-assert.cjs（临时脚本，不入仓库）
+
+【前置数据构造】
+跑本单元前先经 POST /attempts 故意答错 4 道新题（跨 lesson 1 与 lesson 4），构造出 total=5 / byLesson=[lesson1:3, lesson4:2] 的真实欠账。
+DB 起点计数：attempts=0 xp_events=0 lesson_progress=0 checkins=0 reports=0
+
+== B3 · 错题本接口（M2 Day 2）· 构造欠账：跨两课共 4 道新错题 ==
+  · 故意答错 lesson1 item 2（提交 "火"，正确答案 "日"）→ isCorrect=false
+  · 故意答错 lesson1 item 3（提交 "fire"，正确答案 "sun"）→ isCorrect=false
+  · 故意答错 lesson4 item 61（提交 "zàijiàn"，正确答案 "nǐ hǎo"）→ isCorrect=false
+  · 故意答错 lesson4 item 62（提交 "老师"，正确答案 "你好"）→ isCorrect=false
+  [PASS] GET /api/wrongbook → HTTP 200 且 code=0   → HTTP 200 code=0
+  GET /wrongbook 的 data 骨架: {"total":5,"listLen":5,"byLesson":[{"lessonId":1,"lessonTitle":"自然五字","count":3},{"lessonId":4,"lessonTitle":"问候四词","count":2}]}
+  [PASS] GET /wrongbook 的 data（对象，不是数组）：字段集与契约逐字一致   → 期望 3 项 / 实得 3 项
+  [PASS] list 与 byLesson 都是数组   → [true,true]
+  GET /wrongbook.list[0] 原文: {"itemId":2,"wrongTimes":1,"correctSince":0,"lastWrongAt":"2026-11-23 22:46:55","prompt":"rì","promptEn":"Choose the matching characters.","kind":"pinyin","options":["火","水","日","月"],"answer":"日","audioUrl":null,"char":null,"lessonId":1,"lessonTitle":"自然五字","unitTitle":"象形入门","hint":"太阳的样子，中间那一点是它的光。"}
+  [PASS] wrongbook.list[] 元素（§4.3 十五项）：字段集与契约逐字一致   → 期望 15 项 / 实得 15 项
+  [PASS] 每条错题字段集一致
+  [PASS] list.options 已解析为数组
+  [PASS] lessonTitle 已从 items JOIN lessons 带出（视图里没有这些字段）   → ["自然五字","自然五字","问候四词","问候四词","自然五字"]
+  [PASS] unitTitle 已 JOIN units 带出   → ["象形入门","象形入门","日常词汇","日常词汇","象形入门"]
+  [PASS] hint 随行返回（items.hint 列）   → ["太阳的样子，","太阳的样子，","见谁都先用这","见谁都先用这","太阳的样子，"]
+  [PASS] total 与库内「correct_since < 2」计数一致   → 5 vs 5
+  [PASS] 本次构造后欠账共 5 条（含首次那道）   → 5
+  [PASS] 未传 limit 时 list 不截断   → 5/5
+  [PASS] byLesson[] 元素：字段集与契约逐字一致   → 期望 3 项 / 实得 3 项
+  [PASS] byLesson 每条的 count 与库内 GROUP BY 一致   → [[1,3],[4,2]] vs [[1,3],[4,2]]
+  [PASS] byLesson 计数之和 = total   → [5,5]
+  [PASS] list 顺序 = 契约排序 correct_since ASC, wrong_times DESC, last_wrong_at DESC（与库内同 SQL 逐位相同）   → [2,3,61,62,1] vs [2,3,61,62,1]
+  [PASS] list 的 correctSince 单调不减（快掌握的排前面）   → [0,0,0,0,1]
+  GET /wrongbook?limit=2 骨架: {"total":5,"listLen":2,"byLesson":2}
+  [PASS] 【关键】limit 只截 list：total 与 byLesson 仍在全量集合上计算（不是按 list 算的）   → [2,5,2]
+  GET /wrongbook?lessonId=4 骨架: {"total":2,"list":[4,4],"byLesson":[{"lessonId":4,"lessonTitle":"问候四词","count":2}]}
+  [PASS] lessonId 过滤生效：list 全为该课、total=2、byLesson 只剩一课   → [2,[{"lessonId":4,"lessonTitle":"问候四词","count":2}]]
+  [PASS] POST /api/wrongbook/practice → HTTP 200 且 code=0   → HTTP 200 code=0
+  POST /wrongbook/practice 原文（把 item 1 答对）: {"results":[{"itemId":1,"isCorrect":true,"answer":"rì","wrongTimes":1,"correctSince":2}],"cleared":1,"remaining":4}
+  [PASS] practice 的 data：字段集与契约逐字一致   → 期望 3 项 / 实得 3 项
+  [PASS] practice.results[] 元素：字段集与契约逐字一致   → 期望 5 项 / 实得 5 项
+  [PASS] 重练答对 → correctSince 由 1 升到 2（达到 WRONG_MASTERED_AT）   → {"itemId":1,"isCorrect":true,"answer":"rì","wrongTimes":1,"correctSince":2}
+  [PASS] cleared = 1（本次后 correct_since 达到 2 的题数）   → 1
+  [PASS] remaining = 4（= 原欠账 5 − 1）   → 4
+  [PASS] 【关键】practice 也落 attempts 行（复用同一 service，没另写一套）   → 6 → 7
+  重练后 GET /wrongbook 骨架: {"total":4,"ids":[2,3,61,62]}
+  [PASS] 掌握后该题掉出「欠账」集合（correct_since ≥ 2 被接口层 `< 2` 过滤掉）   → [4,[2,3,61,62]]
+  [PASS] practice 传空 results → 400 且 code=1   → HTTP 400 code=1

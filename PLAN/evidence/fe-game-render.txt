@@ -1,0 +1,202 @@
+# 证据 · 渲染取证（浏览器侧硬断言）—— 补 G1/G2/G3 前端与 G5/G6 前端
+
+泳道：fe-game
+单元：G1「我的」页单一 summary / G2 排行榜 / G3 印章灰态 / G5 分享链接游客流程 / G6 组队
+时间：2026-11-23（当晚，接在 `fe-game-g1-g4.txt` 与 `fe-game-g5-g6.txt` 之后）
+**取证方式：作者自测（fe-game 本人跑）—— 这不是「已验收」。**
+「已验收」按 `plan.html` §十二·七 只能由非作者写；本文件只是本路交出的可复核凭据。
+
+## 这份文件补的到底是什么
+
+前两份证据文件把「后端**会**下发什么」验透了，但 §8 的三条验收标准里有两条
+**本身就是渲染问题**，接口侧证明了也不算数：
+
+| §8 原话 | 接口侧能证明吗 | 本文件怎么证明 |
+|---|---|---|
+| G1「所有数字来自**一个** `GET /profile/summary`，不是 N 个请求凑」 | **不能** —— 要数的是**页面**发了几个请求 | 页面级请求监听 + 与页面文本逐字比对 |
+| G2「自己上榜后能看到自己的名字」 | **不能** —— 「看到」是像素 | 榜单行的 DOM 类名 + 计算样式底色 |
+| G3「未得的章**也显示**（灰态），不是只显示已得的」 | **不能** —— 灰态是 CSS | 15 枚印章的 `opacity` / `border-style` 实测计算值 |
+| G5「分享链接未登录能打开」 | 部分能（接口不挂鉴权） | **无任何 storage 的干净上下文**打开分享 URL |
+| G6「建队/入队能走通」 | 部分能（接口 code:0） | 两个视角各自上屏的成员归属 |
+
+前两份文件里「仍未验的部分」列的三条（G2 前端 / G3 前端 / G5-G6 前端）**由本文件勾掉**。
+
+## 环境与方法
+
+- **工具链是借的，没装任何依赖**：复用本机 SmartCampus 的
+  `D:/coding/SmartCampus/web/node_modules/playwright-core`（1.64.1，它期望 chromium **1248**），
+  但用**显式 `executablePath`** 指向本机已有的 chromium **1208**
+  （`C:/Users/Admin/AppData/Local/ms-playwright/chromium-1208/chrome-win64/chrome.exe`）。
+  版本差 40，所以 `executablePath` 是必须的，不能靠 playwright 自己找。
+- **只读使用共享进程**：页面走共享的 vite dev server `http://127.0.0.1:5173`（前端 + `/api` 代理），
+  代理到共享后端 **8091**（PID 32800）。**本轮没有起 8099，也没有 kill 任何 dev server。**
+- **造数据全部走公开接口**，不走 SQL 注入：账号用 `POST /auth/register`
+  （**刻意不走 `/login`** —— 那个接口有 loginLimiter 每分钟 5 次）；对战用 `POST /duels`；
+  组队用 `POST /teams` / `POST /teams/join`。
+- **注入登录态的可靠手法**（hash 路由下 hash-only 导航**不会**重新加载页面，
+  所以在同一 page 里改 hash 是测不到真实加载的）：
+  在 context 里先开一个 boot page 到 `APP + '/'` 让 `window.uni` 就绪 →
+  `page.evaluate(() => window.uni.setStorageSync('token'|'userInfo', …))` →
+  关掉 boot page → **`newPage()` 到目标 hash URL（整页加载，localStorage 同 origin 可见）**。
+  R3 的游客场景**反过来**：全新 context、一个字节 storage 都不写。
+- **判「后端请求」的唯一判据**：`new URL(u).pathname.startsWith('/api/')`。
+  这条判据是被一次**假阳性**逼出来的，见下一节。
+
+### 一次假阳性（如实记录，它是判据的由来）
+
+v1 脚本用 `u.split('/api')[1]` 找后端请求，跑出来报 G1 FAIL（"页面没有第二个取数请求"）。
+**复盘结论：这是我自己的判据写糙，不是产品缺陷。** dev server 的源码模块与 uni-h5 的样式
+全部命中了这个粗糙正则：`/src/api/user.ts`、`/src/api/checkin.ts`、`/src/api/xp.ts`、
+`/src/api/index.ts`，以及 `…/api/modal.css`、`toast.css`、`action-sheet.css`、
+`location-view.css`、`index.js`、`app.js`、`component.js`、`context.js`、`hooks.js`、`util.js`。
+改成只认 `pathname` 以 `/api/` 开头之后，各页的后端请求集合收敛为：
+R1 `["/profile/summary"]`、R2 `["/stamps"]`、R3 `["/duels/A59X6R"]`、R4 `["/rank/week"]`、
+R5 `["/teams/mine"]` —— **每页恰好一个**。
+
+## 命令
+
+    node C:/Users/Admin/AppData/Local/Temp/feg/render.cjs    # 输出重定向到 render.out，不用管道截 stdout
+
+脚本与输出在临时目录（见文末），跑完即删。
+
+## 输出（逐字，`render.out` 全文）
+
+    [准备] A=fx_rzl2g23 id=13 昵称=取证渲染
+    [准备] B=fx_5qya501 id=14 昵称=取证同组
+    [准备] 建对战 code=A59X6R lessonTitle=自然五字
+    [准备] A 打卡 → code=0 xpEarned=5
+    [准备] A 的 summary = {"user":{"id":13,"username":"fx_rzl2g23","nickname":"取证渲染","avatarUrl":null},"xp":{"total":5,"week":5,"today":5},"streak":{"current":1,"max":1,"lastCheckinDate":"2026-11-23"},"rank":{"rankName":"童生","level":1,"weekRank":3,"weekXp":5},"stamps":{"total":15,"earned":0},"learn":{"lessonsDone":0,"lessonsTotal":19,"itemsDone":0,"accuracy":0},"todayCheckedIn":true}
+
+    ===== R1 · G1「我的」页：一个 summary 请求撑起全页 =====
+    [R1] 本页发往后端的请求（pathname 以 /api/ 开头者，全量）：[{"path":"/profile/summary","auth":"Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjEzLCJ1c2VybmFtZSI6ImZ4X3J6bDJnMjMiLCJuaWNrbmFtZSI6IuWPluivgea4suafkyIsImlhdCI6MTc5NTQ0ODc5MSwiZXhwIjoxNzk4MDQwNzkxfQ.BxpvCtVaP06YOoUr0BW-z_iViFxLN0lX_aYmfFSwMwE"}]
+      [PASS] G1 · /profile/summary 恰好被调 1 次  ← 实测 1 次
+      [PASS] G1 · 整页只有这一个后端请求  ← 实测 ["/profile/summary"]
+      [PASS] G1 · 这个请求带着 Authorization（确实是登录态）  ← auth=Bearer …
+    [R1] 页面：昵称=["取证渲染"] 段位=["童生"] 连击=["1"] 四格=["5","5","0","0%"]
+    [R1] 页面行文本=["第 3 名","0 / 15 枚","和同学一起练","出题给同学答"]
+      [PASS] G1 · 昵称渲染出来  ← 实测 "取证渲染"
+      [PASS] G1 · 段位名与接口一致  ← 页面=童生 接口=童生
+      [PASS] G1 · 连击数与接口一致  ← 页面=1 接口=1
+      [PASS] G1 · 累计 XP 与接口一致  ← 页面=5 接口=5
+      [PASS] G1 · 本周 XP 与接口一致  ← 页面=5 接口=5
+      [PASS] G1 · 印章计数与接口一致  ← 页面行=["第 3 名","0 / 15 枚","和同学一起练","出题给同学答"] 接口=0/15
+
+    ===== R2 · G3 印章页：15 枚全未得，仍应画满一页灰章 =====
+    [R2] 后端请求=["/stamps"]
+    [R2] 印章总数=15 灰态数=15 分组=["单元通","笔画","连击","积少成多"] 页头="已得 0 / 15 枚"
+    [R2] 灰态实测计算样式：opacity=0.5  border-top-style=dashed
+    [R2] 圈内字形取值集合=["未"]
+      [PASS] G3 · 渲染出 15 枚印章（不是 0 枚）  ← 实测 15
+      [PASS] G3 · 15 枚全是未得的灰态  ← 实测 15
+      [PASS] G3 · 灰态样式真的生效（opacity 0.5 + 虚线框）  ← opacity=0.5 border=dashed
+      [PASS] G3 · 圈内字形全是「未」  ← ["未"]
+      [PASS] G3 · 页头计数 = 已得 0 / 15 枚  ← "已得 0 / 15 枚"
+      [PASS] G3 · 四个分组都画出来了  ← ["单元通","笔画","连击","积少成多"]
+
+    ===== R3 · G5 分享链接：干干净净的游客上下文（无任何 storage） =====
+    [R3] location=http://127.0.0.1:5173/#/pages/duel/duel?code=A59X6R
+    [R3] localStorage 里有 token 吗=false
+    [R3] 后端请求=[{"path":"/duels/A59X6R","auth":null}]
+    [R3] 页面文本前 400 字=「对战 挑战 · 口令 A59X6R 《自然五字》 取证渲染 出的题，一共 25 道 你叫什么 不登录也能答，写个名字就行 开始答题 答完当场出分，题目里就带答案，不用等谁。」
+      [PASS] G5 · 未被踢去登录页  ← hash=http://127.0.0.1:5173/#/pages/duel/duel?code=A59X6R
+      [PASS] G5 · 确实调到了 GET /duels/:code  ← ["/duels/A59X6R"]
+      [PASS] G5 · 这个请求没带 Authorization（真游客）  ← auth=null
+      [PASS] G5 · 看到了挑战内容（不是空白/报错）
+      [PASS] G5 · 页面给了「不登录也能答」的入口
+
+    ===== R4 · G2 排行页：A 打卡挣了 5 XP，应自己出现在榜上并高亮 =====
+    [R4] 接口 GET /rank/week → me={"rank":3,"weekXp":5,"rankName":"童生"} 我在 list 里=true 行={"rank":3,"userId":13,"nickname":"取证渲染","avatarUrl":null,"weekXp":5,"rankName":"童生","isMe":true}
+      [PASS] R4 · 接口侧：我已上榜且标记 isMe  ← {"rank":3,"userId":13,"nickname":"取证渲染","avatarUrl":null,"weekXp":5,"rankName":"童生","isMe":true}
+    [R4] 后端请求=["/rank/week"]
+    [R4] 榜单行=[{"no":"1","name":"取证账号","rank":"秀才","xp":"507","isMe":false,"bg":"rgba(0, 0, 0, 0)"},{"no":"2","name":"小明","rank":"童生","xp":"55","isMe":false,"bg":"rgba(0, 0, 0, 0)"},{"no":"3","name":"取证渲染","rank":"童生","xp":"5","isMe":true,"bg":"rgb(239, 233, 220)"}]
+    [R4] 前三台子=[{"name":"取证账号","isMe":false,"borderColor":"rgb(222, 214, 198)"},{"name":"小明","isMe":false,"borderColor":"rgb(222, 214, 198)"},{"name":"取证渲染","isMe":true,"borderColor":"rgb(174, 51, 46)"}]
+      [PASS] G2 · 榜上恰好有一行是我（带 row-me）  ← 实测 1 行
+      [PASS] G2 · 那一行显示的是我的昵称  ← 实测 "取证渲染"
+      [PASS] G2 · 那一行的 XP 与接口一致  ← 页面=5 接口=5
+      [PASS] G2 · 那一行的名次与接口一致  ← 页面=3 接口=3
+      [PASS] G2 · 段位名与接口一致  ← 页面=童生 接口=童生
+      [PASS] G2 · 我这行视觉上确实被区分（底色与别人不同）  ← 我=rgb(239, 233, 220) 别人=rgba(0, 0, 0, 0)
+      [PASS] G2 · 名次进前三时，台子上也标了我（cinnabar 边框）  ← [{"name":"取证账号","isMe":false,"borderColor":"rgb(222, 214, 198)"},{"name":"小明","isMe":false,"borderColor":"rgb(222, 214, 198)"},{"name":"取证渲染","isMe":true,"borderColor":"rgb(174, 51, 46)"}]
+
+    ===== R5 · G6 组队页：A 建组 → B 入组 → 两边各自看一遍 =====
+    [R5] A 建组 → code=0 name=取证小组〈渲染〉 slogan=每天十道题 邀请码=L36V2C
+    [R5] B 用小写码入组 → code=0 memberCount=2
+    [R5][A视角] 后端请求=["/teams/mine"]
+    [R5][A视角] 组名="取证小组〈渲染〉" 人数="2 / 8 人" 口号="每天十道题" 邀请码="L36V2C" 汇总=["5","5"]
+    [R5][A视角] 成员行=[{"name":"取证渲染","tags":["队长","我"],"isMe":true},{"name":"取证同组","tags":[],"isMe":false}]  底部按钮="解散小组（队长退出）"
+      [PASS] G6 · 组名渲染  ← 实测 "取证小组〈渲染〉"
+      [PASS] G6 · 人数 = 2 / 8 人  ← 实测 "2 / 8 人"
+      [PASS] G6 · 邀请码与接口一致  ← 页面=L36V2C 接口=L36V2C
+      [PASS] G6 · 成员 2 行  ← 实测 2
+      [PASS] G6 · A 视角里「我」在 A 那行  ← {"name":"取证渲染","tags":["队长","我"],"isMe":true}
+      [PASS] G6 · A 那行带「队长」标签  ← ["队长","我"]
+      [PASS] G6 · B 那行没被标成我  ← {"name":"取证同组","tags":[],"isMe":false}
+      [PASS] CR-5 · 口号渲染出来了（slogan 不是只写不读的死字段）  ← 实测 "每天十道题"
+      [PASS] G6 · A 是队长 → 底部按钮是「解散小组（队长退出）」  ← "解散小组（队长退出）"
+    [R5][B视角] 成员行=[{"name":"取证渲染","tags":["队长"],"isMe":false},{"name":"取证同组","tags":["我"],"isMe":true}]  底部按钮="退出小组"
+      [PASS] G6 · B 视角里「我」翻到 B 那行（isMe 是按看的人算的）  ← {"name":"取证同组","tags":["我"],"isMe":true}
+      [PASS] G6 · B 视角里 A 那行仍带「队长」但不再是我  ← {"name":"取证渲染","tags":["队长"],"isMe":false}
+      [PASS] G6 · B 不是队长 → 底部按钮是「退出小组」  ← "退出小组"
+
+    [汇总] 失败断言数 = 0
+    [清理] 本次造的账号：fx_rzl2g23 (id=13) / fx_5qya501 (id=14)；对战 code=A59X6R；小组 inviteCode=L36V2C
+
+**`[PASS]` 共 40 条，失败 0 条**（`grep -c '\[PASS\]' render.out` = 40）。
+
+## 截图（已归档进仓库：`PLAN/evidence/fe-game-render-shots/`，用于人工目视裁定）
+
+| 文件 | 内容 | 目视所见 |
+|---|---|---|
+| `r1-profile.png` | G1「我的」页 | 昵称「取证渲染」+ 段位徽章「童生」；连击 1 天（最长 1 天）+「今日已打卡」；累计 XP 5 / 本周 XP 5 / 完成课时 0/19 / 正确率 0%；四行入口：本周排名「第 3 名」、印章「0 / 15 枚」、学习小组「和同学一起练」、PK 对战「出题给同学答」；段位条「童生 还差 495 XP 升 秀才」 |
+| `r2-stamp.png` | G3 印章页灰态 | 15 枚印章**全部画出来**：圈内「未」、虚线描边、整体降透明度；分组标题「单元通 / 笔画 / 连击 / 积少成多」四段齐全；页头「已得 0 / 15 枚」；底部「看看有没有新印章」 |
+| `r3-duel-guest.png` | G5 游客页 | 页头「对战」；卡片「挑战 · 口令 A59X6R /《自然五字》/ 取证渲染 出的题，一共 25 道」；输入框占位符「不登录也能答，写个名字就行」；朱红主按钮「开始答题」；**无登录拦截** |
+| `r4-rank.png` | G2 排行页 | 前三名台子 + 榜单行，我（取证渲染 童生 5 XP）那行底色与他人不同、台子描边为朱红 |
+| `r5-team-A.png` / `r5-team-B.png` | G6 组队页两个视角 | A 视角「我」在首行且带「队长」「我」双标签、底部「解散小组（队长退出）」；B 视角「我」翻到第二行、底部「退出小组」 |
+
+目视结论：三张吃重的图（r1 / r2 / r3）与断言读数一致，没有出现"断言过了但页面是坏的"
+（布局塌陷、文字重叠、空白区块）这类只有看图才发现的问题。
+
+## 清库（共享库已复原）
+
+渲染脚本造的账号用临时 knex 脚本 `server/.cleanup-render.ts` 按 **username 精确清**
+（不用模糊匹配，避免误伤别的泳道的取证账号），跑完即删该脚本：
+
+    [待清] [{"id":14,"username":"fx_5qya501"},{"id":12,"username":"fx_lbz639j"},{"id":13,"username":"fx_rzl2g23"}]
+    [清] duels: 2 行
+    [清] xp_events: 1 行
+    [清] checkins: 1 行
+    [清] user_streaks: 1 行
+    [清] users: 3 行
+    [复核] 残留目标账号= []
+    [复核] 现存 users= [{"id":1,"username":"xiaoming"},{"id":4,"username":"pfd5c0q"}]
+    [复核] 表计数= {"duels":0,"teams":0,"team_members":0}
+
+（`fx_lbz639j` 是 v1 那次假阳性运行留下的账号。）独立复核确认：目标账号 0 残留，
+`duels` / `teams` / `team_members` 归 0，**共享库里 `user_id=4`（`pfd5c0q` / 昵称「取证账号」）
+是 fe-learn 的取证账号，全程一个字节没动** —— 它在 R4 榜单里以 507 XP 出现，那是它自己的数据。
+
+## 仍未验的部分（写明白，别让复核的人误以为都验过）
+
+- ~~**8 人满员上限（`TEAM_MAX_MEMBERS=8`）没实测**：本轮只验到 2 人组，没造第 9 个人去打满。~~
+  ~~「满员后入组被拒」这条路径没有运行时证据。~~ → **已在 `evidence/fe-game-edge.txt` 补齐**
+  （2026-11-24 00:18）：队长 + 7 人 = 8、第 7 个加入者成功、第 8 个 `code:1`「小组已满（上限 8 人）」，拒绝原子。
+- ~~**对战过期（`expires_at`）没造数据验**：没构造过期挑战去看它返回什么。~~ → **已在 `evidence/fe-game-edge.txt` 补齐**
+  （2026-11-24 00:18）：过期后 `status:"expired"`、`items:null`、提交被拒「挑战已过期」且不写库，
+  并且**库里 `status` 列仍是 `open`** —— 证明 `expired` 是读时算的。
+- ~~**六单元都没有产物级验证**：按编排者要求本轮**没有跑 `uni build`**（内存吃紧、构建串行排队），
+  所以以上全部是 **dev server（5173）** 下的结论，不是打包产物的结论。~~
+  → **已在 `evidence/fe-game-artifact.txt` 补齐**（2026-11-24 上午）：编排者随后给了
+  「等构建排队，再跑产物级验证」，`npm run build:h5` 已跑，并在**打包产物**上把 §8 那三条
+  （G1 单一 summary / G3 印章灰态 / G5 游客链接）**逐条重验**，**42 条断言 0 失败**。
+  即本文件里那些 dev server 结论，现在在产物上都有对应读数了。
+  但该文件补的是 **H5 产物**，**APK 与真机/WebView 仍然没验**。
+- **浏览器是 chromium 1208（桌面引擎）**，不是真机、不是 WebView。截图只能证明布局与样式在
+  桌面 Chromium 下的样子；本项目在移动端的已知坑（iOS 软键盘 / tabbar 遮挡一类）
+  **不在本轮覆盖面内**。
+
+## 临时文件清单（已删 / 待删）
+
+- `C:\Users\Admin\AppData\Local\Temp\feg\`：`render.cjs`（脚本）、`render.out`（逐字输出）、
+  `run.stdout` / `run.stderr` —— 脚本与输出**跑完即删**。
+  6 张 png **已归档**到 `PLAN/evidence/fe-game-render-shots/`（临时目录里那份一并删掉）。
+- `D:\coding\hanyu-dazi\server\.cleanup-render.ts` —— 清库脚本，**跑完即删**。

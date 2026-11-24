@@ -1,0 +1,49 @@
+# B6 验收断言 · 静态资源（/audio、/uploads 挂载与取文件）
+
+生成时间(本地)   : 2026-11-23 22:46:55
+目标             : http://127.0.0.1:8099（本地开发后端，仅 loopback）
+数据库           : C:\Users\Admin\AppData\Local\Temp\hd-beapi-fixture-b9eEN9\fixture.db（夹具一次性库，与后端同一文件；脚本用只读连接）
+夹具目录         : C:\Users\Admin\AppData\Local\Temp\hd-beapi-fixture-b9eEN9
+测试账号         : id=1 username=beapi_probe nickname=beapi 断言探针
+鉴权             : 夹具模式：经 POST /auth/register 现建探针账号并取回 token（该端点无限流，回避 5/min 的 /auth/login）
+被断言的进程     : pid=25216，启动于 2026-11-23 22:46:54，监听 127.0.0.1:8099
+源码 mtime(UTC)  : 
+                   src/routes/content.ts = 2026-11-23 08:55:07
+                   src/routes/attempts.ts = 2026-11-23 08:58:58
+                   src/routes/wrongbook.ts = 2026-11-23 08:57:18
+                   src/routes/progress.ts = 2026-11-23 08:57:35
+                   src/routes/index.ts = 2026-11-23 08:49:23
+                   src/app.ts = 2026-11-23 08:49:25
+                   src/services/item.ts = 2026-11-23 08:56:57
+断言人           : be-api（本单元作者）。本文件是**自测取证**，不是验收结论 ——
+                   状态仍停在「待验收」，须由非作者复核后才可改「已验收」。
+脚本             : %TEMP%\hd-beapi-assert.cjs（临时脚本，不入仓库）
+
+【前置数据构造】
+uploads 目录内原本无任何真实文件（只有 .gitkeep），故本项用探针文件取证并在测完删除。
+音频为 content/audio 下真实 mp3（40 个），逐字节 md5 比对。
+
+== B6 · 静态资源（M2 Day 2） ==
+  · 挂载点源码核对（server/src/app.ts）：
+    L23: app.use('/audio', express.static(path.join(__dirname, '..', 'content', 'audio')));
+    L24: app.use('/uploads', express.static(path.join(process.cwd(), process.env.UPLOAD_DIR || './uploads')));
+    L27: app.use('/api', routes);
+    L31: fail(res, `接口不存在: ${req.method} ${req.path}`, 404);
+  [PASS] /audio 与 /uploads 两段 express.static 都挂在 404 兜底之前   → {"iAudio":23,"iUploads":24,"iApi":27,"iFallback":31}
+  · content/audio 内 mp3 文件数：40
+  [PASS] GET /audio/bi.mp3 → HTTP 200   → HTTP 200
+  [PASS] HTTP 取回的字节数与磁盘一致且 md5 相同   → 7200 B / md5 445427b01d2ea3842af1a5e758cb13cf vs 磁盘 7200 B / md5 445427b01d2ea3842af1a5e758cb13cf
+  [PASS] Content-Type 正确   → audio/mpeg
+  [PASS] 抽样复核 /audio/da.mp3   → HTTP 200 7488 B
+  [PASS] 抽样复核 /audio/er.mp3   → HTTP 200 7632 B
+  [PASS] 抽样复核 /audio/hen-gaoxing-renshi-ni.mp3   → HTTP 200 13536 B
+  [PASS] 不存在的音频 → 落到 JSON 404 兜底（code=1），说明 static 之后还有统一兜底、顺序正确   → HTTP 404 body={"code":1,"message":"接口不存在: GET /audio/__nope__.mp3","data":null}
+  · uploads 目录原本只有 .gitkeep（仓库内无任何真实上传物），因此本项写入探针文件 be-api-b6-probe.txt 取证，测完即删。
+  [PASS] GET /uploads/be-api-b6-probe.txt → HTTP 200   → HTTP 200
+  [PASS] 回读内容与写入逐字节相同   → "hanyu-dazi be-api B6 static probe @ 2026"
+  [PASS] 字节数一致   → 56 B
+  [PASS] 不存在的上传物 → JSON 404 兜底（code=1）   → HTTP 404 body={"code":1,"message":"接口不存在: GET /uploads/__nope__.txt","data":null}
+  [PASS] 探针文件已删除，uploads 目录复位   → [".gitkeep"]
+  mobile/vite.config.ts 的 proxy 键（§4.10 的另一半，归 fe-learn）: [["\"/api\"",true],["\"/audio\"",true],["\"/uploads\"",true]]
+  [PASS] 前端 vite proxy 三条 /api、/audio、/uploads 都在（跨路只读核对，be-api 不改该文件）   → [["\"/api\"",true],["\"/audio\"",true],["\"/uploads\"",true]]
+  · 路径穿越（如 /audio/../../.env）本次未测：fetch 会自动规范化 URL，测不准；express.static 自身默认拒绝 .. 越权路径。

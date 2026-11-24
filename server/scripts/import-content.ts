@@ -22,6 +22,7 @@
 import fs from 'fs';
 import path from 'path';
 import db from '../src/config/database';
+import { seedStamps } from '../src/seeds/stamps.seed';
 
 type Kind = 'recognize' | 'pinyin' | 'meaning' | 'stroke' | 'listen';
 type Field = 'text' | 'pinyin' | 'gloss';
@@ -87,6 +88,34 @@ const contentDir = path.resolve(__dirname, '..', 'content');
 const audioDir = path.join(contentDir, 'audio');
 const contentFile = path.join(contentDir, 'content.json');
 
+/**
+ * 音频台账：记着每个 mp3 是按哪段文本合成的。
+ *
+ * 为什么非要它：「文件在不在」这种检查漏得掉一种错。mp3 里查不出念的是哪个字
+ * （edge-tts 的输出没有 ID3 标签，文件头直接是 MPEG 帧同步），文件名又是不变的
+ * key。所以把「日」改成「阳」而没重新生成音频时，`ri.mp3` 照样存在、照样通过，
+ * 学习者看到「阳」听到「rì」，谁都不报错。台账由 scripts/audio-manifest.ts 维护，
+ * 这里只读来比对。
+ *
+ * 返回 null = 没有台账或读不动，此时跳过检查（宁可漏报，不误报）。
+ */
+function loadAudioManifest(): Map<string, string> | null {
+  const file = path.join(audioDir, 'manifest.json');
+  if (!fs.existsSync(file)) return null;
+  try {
+    const raw = JSON.parse(fs.readFileSync(file, 'utf8')) as {
+      entries?: Record<string, { text?: string }>;
+    };
+    const out = new Map<string, string>();
+    for (const [k, v] of Object.entries(raw.entries ?? {})) {
+      if (v && typeof v.text === 'string') out.set(k, v.text);
+    }
+    return out;
+  } catch {
+    return null;
+  }
+}
+
 // ---------------------------------------------------------------- 确定性随机
 
 /** FNV-1a：把 key 压成一个 32 位种子。要的不是随机性好，是「同样的输入永远同样的输出」。 */
@@ -126,6 +155,8 @@ interface ItemRow {
   answer: string;
   char: string | null;
   audio_url: string | null;
+  /** 答错时给学生的一句「为什么」（契约 §4.2 的 hint）。内容里没写就是 null，不是空串。 */
+  hint: string | null;
   sort: number;
 }
 
@@ -236,6 +267,7 @@ function expand(self: Flat, all: Flat[], kinds: Kind[], order: number, hasAudio:
       answer,
       char: kind === 'stroke' ? p.text : null,
       audio_url: kind === 'listen' ? `/audio/${p.key}.mp3` : null,
+      hint: p.hint ?? null,
       sort: order * 10 + rows.length + 1,
     });
   }
@@ -308,6 +340,11 @@ function validate(c: Content): void {
         if (!p.text) errors.push(`${pat}.text 不能为空`);
         if (!p.pinyin) errors.push(`${pat}.pinyin 不能为空（${p.key}）`);
         if (!p.gloss) errors.push(`${pat}.gloss 不能为空（${p.key}）—— 选词义题的选项就是它`);
+        // items.hint 是 VARCHAR(200)；SQLite 不真拦长度，超了会悄悄存进去，
+        // 所以要在这里挡住 —— 前端弹出半句话比没有提示更糟。
+        if (p.hint != null && String(p.hint).length > 200) {
+          errors.push(`${pat}（${p.key}）.hint 超过 200 字：现在 ${String(p.hint).length} 字`);
+        }
 
         if (p.kinds && p.kinds.length === 0) {
           errors.push(`${pat}.kinds 是空数组 —— 想继承所属课时的就别写这个字段`);
@@ -356,6 +393,9 @@ async function main(): Promise<void> {
       : []
   );
 
+  // 音频台账：用来发现「文本改了、音频没重新生成」这种不报错的错
+  const audioManifest = loadAudioManifest();
+
   let nUnitsNew = 0;
   let nUnitsUpd = 0;
   let nLessonsNew = 0;
@@ -363,6 +403,7 @@ async function main(): Promise<void> {
   let nItemsNew = 0;
   let nItemsUpd = 0;
   let nNoAudio = 0;
+  const audioDrift: string[] = [];
   const writtenItemIds: number[] = [];
   const importedLessonIds: number[] = [];
 
@@ -419,6 +460,14 @@ async function main(): Promise<void> {
           const kinds = (p.kinds ?? l.kinds ?? []) as Kind[];
           const hasAudio = audioKeys.has(p.key);
           if (kinds.includes('listen') && !hasAudio) nNoAudio++;
+          if (kinds.includes('listen') && hasAudio && audioManifest) {
+            const recorded = audioManifest.get(p.key);
+            if (recorded === undefined) {
+              audioDrift.push(`${p.key}：台账里没有这条`);
+            } else if (recorded !== p.text) {
+              audioDrift.push(`${p.key}：台账记的是「${recorded}」，content.json 现在是「${p.text}」`);
+            }
+          }
 
           const self = all.find((x) => x.point.key === p.key)!;
           for (const r of expand(self, all, kinds, pi, hasAudio)) {
@@ -471,12 +520,15 @@ async function main(): Promise<void> {
   });
 
   const itemsTotal = Number(((await db('items').count({ c: 'id' }).first()) as any)?.c ?? 0);
+  const hintedItems = Number(
+    ((await db('items').whereNotNull('hint').count({ c: 'id' }).first()) as any)?.c ?? 0
+  );
 
   console.log('\n导入完成');
-  console.log(`  知识点  ${all.length} 个`);
+  console.log(`  知识点  ${all.length} 个（其中写了 hint 的 ${all.filter((x) => x.point.hint).length} 个）`);
   console.log(`  单元    ${content.units.length} 个（新增 ${nUnitsNew}，更新 ${nUnitsUpd}）`);
   console.log(`  课时    ${nLessonsTotal} 个（新增 ${nLessonsNew}，更新 ${nLessonsUpd}）`);
-  console.log(`  题目    新增 ${nItemsNew}，更新 ${nItemsUpd} —— 库里现有 ${itemsTotal} 条`);
+  console.log(`  题目    新增 ${nItemsNew}，更新 ${nItemsUpd} —— 库里现有 ${itemsTotal} 条（带 hint 的 ${hintedItems} 条）`);
 
   if (staleDeleted.length) {
     console.log(`\n  清掉 ${staleDeleted.length} 条内容里已删除的题（无人作答）：`);
@@ -494,6 +546,11 @@ async function main(): Promise<void> {
   if (nNoAudio) {
     console.log(`\n  跳过 ${nNoAudio} 道听音题：content/audio/ 里还没有对应的 mp3（音频生成后再跑一次就有了）`);
   }
+  if (audioDrift.length) {
+    console.log(`\n  ⚠ 有 ${audioDrift.length} 个音频和文本对不上 —— 这些听音题会「看到 A、听到 B」，且不会报任何错：`);
+    for (const d of audioDrift) console.log(`    - ${d}`);
+    console.log('    → 重新生成这些 mp3，再跑 npx tsx scripts/audio-manifest.ts --write 更新台账');
+  }
   if (shortPool.length) {
     console.log(`\n  有 ${shortPool.length} 道题选项不满 4 个：`);
     for (const s of shortPool) console.log(`    - ${s}`);
@@ -504,6 +561,18 @@ async function main(): Promise<void> {
   for (const k of KINDS) {
     const s = await db('items').where({ kind: k }).first();
     if (s) console.log(`    [${s.kind}] ${s.prompt} → ${s.answer}　选项 ${s.options ?? '(无)'}`);
+  }
+
+  // 印章定义跟着内容一起对齐：单元章 / 描红章的 ref_key 就是 units.key，
+  // 内容加了单元而种子没跟上，那几枚章会永远灰着且不报错。放在同一个脚本里，
+  // 就不会出现「改了 content.json 忘了跑 seed」。
+  const stamps = await seedStamps(db);
+  console.log('\n  印章  achievements 写入完成');
+  console.log(`    新增 ${stamps.inserted.length}，更新 ${stamps.updated.length}，未变 ${stamps.unchanged.length}`);
+  for (const c of stamps.inserted) console.log(`    + ${c}`);
+  for (const c of stamps.updated) console.log(`    ~ ${c}`);
+  if (stamps.foreign.length) {
+    console.log(`    库里有、种子里没有（只报不删）：${stamps.foreign.join(', ')}`);
   }
 
   await db.destroy();

@@ -1,0 +1,72 @@
+OB-1 修复的**非作者**静态复核
+============================================================
+复核人：hanyu-dazi-57（fe-learn）—— 对 mobile/src/pages/wrongbook/wrongbook.vue
+        本轮零字节写入（该文件 10:34:02 与 10:54:10 两笔均为编排者 hanyu-dazi-bd 所写）
+复核时间：2026-11-24 11:2x
+复核方式：**只读磁盘**，未跑浏览器（web.cjs 的渲染复跑正被占用，避开那 2GB 内存）
+转录人：编排者（hanyu-dazi-bd）。本文件**转录 57 的读数**，不改一字结论。
+
+背景：OB-1 = 错题本的 <ScrollView> 触发 Vue activated 钩子时抛
+      TypeError: Cannot set properties of null (setting 'scrollLeft')
+      （uni-h5.es.js:14594），10:54:10 由编排者改为 .chips + overflow-x:auto。
+      编排者在 PLAN/round7-orchestrator-changes.md §九 自陈「四把量具都是我写的」，
+      这条修复正缺一个**非作者**来读 —— 本件就是那一步。
+
+
+一、触发面已清零（这是本件最有价值的一条）
+------------------------------------------------------------
+    grep -rn '<scroll-view' mobile/src/
+
+全仓**只剩 wrongbook.vue 的两行注释**（:60 模板注释、:451 CSS 注释），
+**没有第二处真实 <scroll-view> 用法**。
+
+⇒ 这个框架级隐患（uni-h5.es.js:14594 只判 realScroll*、不判 main 为 null）
+  全仓触发面**恰为 1 处**，就是已修的这处，**无同类暴露面**。
+
+（转录人补充：这一条是**范围断言**，不是"修好了"的断言 —— 它说明"没有别处也坏了"，
+  不说明"这处修对了"。后者仍需渲染侧复跑。）
+
+二、替换实现与 plan 的 iOS 清单一致
+------------------------------------------------------------
+- wrongbook.vue:453 `.chips` = white-space:nowrap; overflow-x:auto;
+  overflow-y:hidden
+- **没有** `-webkit-overflow-scrolling: touch`
+  编排者独立复核（grep 全 mobile/src）：该属性在全仓**命中 0 处**，唯一一处是
+  wrongbook.vue:68 的注释（"注意不要加 -webkit-overflow-scrolling"）。
+  与 57 的读数一致。
+
+三、没破单根
+------------------------------------------------------------
+三页（learn / duel / wrongbook）template 的直接子元素**各仅 1 个**
+（<view class="hd-page …">）。
+
+57 另注：本项目是 uni-app + pages.json，**不存在** SmartCampus 那种
+<Transition> 包 router-view 的多根陷阱 ⇒ 若编排者曾按那条经验担心，可以放下。
+
+四、产物钉子逐字复算，全部命中
+------------------------------------------------------------
+57 复算了编排者在 PLAN/round7-orchestrator-changes.md §十.2 记的每一条：
+- mobile/dist/build/h5/index.html  md5 = 9aed44f8062359e911b6e11aca988dcc  ✓
+- 38 assets、mtime 10:21:13  ✓
+- 产物里 uni-scroll-view 命中 2 个 chunk  ✓
+- 产物里 qbar-clock / sum-why / kindBar 命中 **0**  ✓
+- learn chunk 仍含「录下来听自己」、不含「听到什么」  ✓
+
+⇒ §十.2「前端产物落后于代码」**属实**（部署波必须先重打 H5）。
+
+五、附带一条（对 L1/L3/L4 有用）
+------------------------------------------------------------
+57 确认 5173 这个 dev server 上**已经是新代码**：
+  curl /src/pages/learn/learn.vue  → 「听到什么」×1、「录下来听自己」×0
+  curl /src/pages/wrongbook/…      → sum-why ×2、kindBar ×3
+⇒ L1/L3/L4 的渲染重取**不必等 uni build**。
+
+
+本件买到什么 / 没买到什么
+------------------------------------------------------------
+- 买到：①一条**范围**结论（触发面恰 1 处、无同类暴露面）；②替换实现**没有踩**
+  plan 里点名的 iOS 反模式；③没破单根；④**产物钉子被第二方逐字复算命中**。
+  这几条都是编排者**自己证不了**的（自陈"量具都是我写的"），由非作者读出来才算数。
+- **没买到**：①"这处**修对了**"—— 静态读盘证明不了运行期不再抛错，
+  仍必须由渲染侧复跑（谁跑、哪个 stage、CRIT/AUX、时刻，见编排者的账本）；
+  ②本件**不涉及** L1–L5 / G1–G6 的任何状态词 —— 那些等 web.cjs 在**当前代码**上跑完。

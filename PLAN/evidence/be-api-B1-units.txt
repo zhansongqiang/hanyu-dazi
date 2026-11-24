@@ -1,0 +1,86 @@
+# B1 验收断言 · 内容浏览接口（GET /units、/units/:id/lessons、/lessons/:id、/lessons/:id/items）
+
+生成时间(本地)   : 2026-11-23 22:46:55
+目标             : http://127.0.0.1:8099（本地开发后端，仅 loopback）
+数据库           : C:\Users\Admin\AppData\Local\Temp\hd-beapi-fixture-b9eEN9\fixture.db（夹具一次性库，与后端同一文件；脚本用只读连接）
+夹具目录         : C:\Users\Admin\AppData\Local\Temp\hd-beapi-fixture-b9eEN9
+测试账号         : id=1 username=beapi_probe nickname=beapi 断言探针
+鉴权             : 夹具模式：经 POST /auth/register 现建探针账号并取回 token（该端点无限流，回避 5/min 的 /auth/login）
+被断言的进程     : pid=25216，启动于 2026-11-23 22:46:54，监听 127.0.0.1:8099
+源码 mtime(UTC)  : 
+                   src/routes/content.ts = 2026-11-23 08:55:07
+                   src/routes/attempts.ts = 2026-11-23 08:58:58
+                   src/routes/wrongbook.ts = 2026-11-23 08:57:18
+                   src/routes/progress.ts = 2026-11-23 08:57:35
+                   src/routes/index.ts = 2026-11-23 08:49:23
+                   src/app.ts = 2026-11-23 08:49:25
+                   src/services/item.ts = 2026-11-23 08:56:57
+断言人           : be-api（本单元作者）。本文件是**自测取证**，不是验收结论 ——
+                   状态仍停在「待验收」，须由非作者复核后才可改「已验收」。
+脚本             : %TEMP%\hd-beapi-assert.cjs（临时脚本，不入仓库）
+
+【前置数据构造】
+本次为**夹具起点取样**：一次性库刚建好，attempts=0（B0 文件记录了同一时刻的四张表计数）。
+作答后会在本文件末尾追加「复跑」段，用于证明进度聚合是活的；两段合起来才说明问题，单看首段不为过。
+
+== B1 · 内容浏览接口（M2 Day 2）· 夹具起点：全库零作答状态 ==
+  · 阈值来源 .env：XP_PER_CORRECT=10 XP_PER_WRONG=2 XP_PER_LESSON=20
+  [PASS] GET /api/units → HTTP 200 且 code=0   → HTTP 200 code=0
+  [PASS] GET /units 的 data 是数组（契约明确「不是分页对象」）   → 长度 6
+  GET /units[0] 原文: {"id":1,"key":"basic-char","level":"basic","type":"char","title":"象形入门","titleEn":"Picture Characters","intro":"十二个字是从图画变来的，看形状就能猜到意思。","sort":1,"lessonCount":3,"doneCount":0,"itemCount":60,"progress":0}
+  [PASS] GET /units[] 元素：字段集与契约逐字一致   → 期望 12 项 / 实得 12 项
+  [PASS] 全部 6 个单元字段集完全一致   → 无差异
+  聚合数字：接口值 vs 库内实算 [接口, 库]: [{"key":"basic-char","lessonCount":[3,3],"itemCount":[60,60],"doneCount":[0,0],"progress":[0,0]},{"key":"basic-word","lessonCount":[4,4],"itemCount":[68,68],"doneCount":[0,0],"progress":[0,0]},{"key":"basic-sentence","lessonCount":[3,3],"itemCount":[48,48],"doneCount":[0,0],"progress":[0,0]},{"key":"advanced-char-radical","lessonCount":[3,3],"itemCount":[48,48],"doneCount":[0,0],"progress":[0,0]},{"key":"advanced-word-city","lessonCount":[3,3],"itemCount":[36,36],"doneCount":[0,0],"progress":[0,0]},{"key":"extended-dialogue-daily","lessonCount":[3,3],"itemCount":[36,36],"doneCount":[0,0],"progress":[0,0]}]
+  [PASS] lessonCount 与 lessons 表 COUNT 一致
+  [PASS] itemCount 与 items 表 COUNT 一致（不是冗余字段猜的）
+  [PASS] doneCount 与 lesson_progress(status=done) COUNT 一致
+  [PASS] progress = doneCount/lessonCount 保留 2 位，无课时为 0
+  [PASS] GET /api/units/1/lessons → HTTP 200 且 code=0   → HTTP 200 code=0
+  [PASS] GET /units/:id/lessons 的 data 是数组   → 长度 3
+  GET /units/1/lessons[0] 原文: {"id":1,"key":"basic-char-nature","title":"自然五字","titleEn":"Five from Nature","intro":"天上、地上、水里的五样东西。","estMinutes":8,"sort":1,"itemCount":25,"status":"none","bestScore":0,"bestTotal":null}
+  [PASS] GET /units/:id/lessons[] 元素：字段集与契约逐字一致   → 期望 11 项 / 实得 11 项
+  [PASS] 零作答状态下每课 status 全为 "none"   → ["none","none","none"]
+  [PASS] 零作答状态下 bestScore=0 / bestTotal 空   → [[0,null],[0,null],[0,null]]
+  [PASS] 每课 itemCount 与 items 表 COUNT 一致   → [[25,25],[20,20],[15,15]]
+  [PASS] 课时按 sort 升序   → [1,2,3]
+  [PASS] GET /api/lessons/1 → HTTP 200 且 code=0   → HTTP 200 code=0
+  [PASS] GET /lessons/:id 顶层：字段集与契约逐字一致   → 期望 10 项 / 实得 10 项
+  GET /lessons/1 顶层（items 省略）: {"id":1,"key":"basic-char-nature","title":"自然五字","titleEn":"Five from Nature","intro":"天上、地上、水里的五样东西。","estMinutes":8,"sort":1,"unit":{"id":1,"key":"basic-char","title":"象形入门","level":"basic","type":"char"},"progress":{"status":"none","bestScore":0,"bestTotal":null,"attemptsCount":0},"items":"[…25 项]"}
+  [PASS] GET /lessons/:id.unit：字段集与契约逐字一致   → 期望 5 项 / 实得 5 项
+  [PASS] GET /lessons/:id.progress：字段集与契约逐字一致   → 期望 4 项 / 实得 4 项
+  [PASS] 零作答课时 progress = {status:"none", attemptsCount:0}   → {"status":"none","bestScore":0,"bestTotal":null,"attemptsCount":0}
+  [PASS] GET /lessons/:id 内含 items 数组   → 25 项
+  GET /lessons/1.items[0] 原文: {"id":1,"kind":"recognize","prompt":"日","promptEn":"Choose the correct pinyin.","options":["rì","yuè","huǒ","shuǐ"],"answer":"rì","char":null,"audioUrl":null,"sort":1,"lessonId":1,"pointKey":"ri"}
+  [PASS] item 对象（§4.1 十一项）：字段集与契约逐字一致   → 期望 11 项 / 实得 11 项
+  [PASS] 同一课时内每个 item 字段集一致
+  [PASS] items 按 sort 升序   → [1,2,3,4,5,11,12,13,14,15,21,22,23,24,25,31,32,33,34,35,41,42,43,44,45]
+  [PASS] options 已 JSON.parse 成数组（契约：是数组，stroke 题为 null）   → ["array(4)","array(4)","array(4)","null","array(4)","array(4)","array(4)","array(4)","null","array(4)","array(4)","array(4)","array(4)","null","array(4)","array(4)","array(4)","array(4)","null","array(4)","array(4)","array(4)","array(4)","null","array(4)"]
+  [PASS] item.lessonId 全部等于所在课时 id
+  [PASS] 内容接口返回 answer（契约 §4.1「答案字段的取舍」明确要返回）   → ["rì","日","sun","日","日","yuè","月","moon","月","月","shān","山","mountain","山","山","shuǐ","水","water","水","水","huǒ","火","fire","火","火"]
+  [PASS] GET /api/lessons/1/items → HTTP 200 且 code=0   → HTTP 200 code=0
+  [PASS] GET /lessons/:id/items 的 data 就是 items 数组本身（不是包一层）   → 25 项
+  [PASS] GET /lessons/:id/items 与 GET /lessons/:id 的 items 逐字节相同
+  [PASS] stroke 题 options 为 null（库内 28 道 stroke 题，抽 item 24）   → null
+  [PASS] 无 token 访问 /units → HTTP 401 且 code=1（业务失败与 HTTP 正交）   → HTTP 401 code=1
+  [PASS] 不存在的课时 /lessons/9999 → 404 且 code=1   → HTTP 404 code=1
+  [PASS] 非法 id /lessons/abc → 400 且 code=1（posInt 守卫）   → HTTP 400 code=1
+
+
+############################
+# B1 复跑：完成课时 1 之后再取一次同样的四个接口
+# 追加时间(本地): 2026-11-23 22:46:55
+# 断言人: be-api（本单元作者）—— 同为自测取证，不构成验收结论
+
+【追加前的数据变化】
+变化来源：POST /attempts ×2（item 1 先错后对）+ POST /lessons/1/finish（5/5）→ lesson_progress(lesson 1) 变为 status=done / best_score=5。
+目的：证明 /units 的 doneCount、progress 与 /units/:id/lessons 的 status/bestScore 是实时聚合，不是静态或硬编码。
+
+
+== B1 复跑（完成课时 1 之后）· 证明进度聚合随作答变化 ==
+  复跑 GET /units[0] 原文: {"id":1,"key":"basic-char","level":"basic","type":"char","title":"象形入门","titleEn":"Picture Characters","intro":"十二个字是从图画变来的，看形状就能猜到意思。","sort":1,"lessonCount":3,"doneCount":1,"itemCount":60,"progress":0.33}
+  [PASS] 单元 1 的 doneCount 由 0 变 1、progress 随之变化（聚合非硬编码）   → [1,0.33,3]
+  复跑 GET /units/1/lessons[0] 原文: {"id":1,"key":"basic-char-nature","title":"自然五字","titleEn":"Five from Nature","intro":"天上、地上、水里的五样东西。","estMinutes":8,"sort":1,"itemCount":25,"status":"done","bestScore":5,"bestTotal":5}
+  [PASS] 课时 1 变为 status:"done" / bestScore:5 / bestTotal:5   → ["done",5,5]
+  [PASS] 同单元其余课时仍为 "none"（进度只落在答过的课上）   → [[1,"done"],[2,"none"],[3,"none"]]
+  复跑 GET /lessons/1.progress 原文: {"status":"done","bestScore":5,"bestTotal":5,"attemptsCount":2}
+  [PASS] 课时详情 progress.status=done / attemptsCount=2   → {"status":"done","bestScore":5,"bestTotal":5,"attemptsCount":2}

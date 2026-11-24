@@ -14,6 +14,17 @@ export default defineConfig({
         target: "http://127.0.0.1:8091",
         changeOrigin: true,
       },
+      // 听音题音频（/audio/<point.key>.mp3，后端的 express.static）
+      // 不加这两条的话，前端请求 /audio/xxx.mp3 会打到 5173 而 404 —— 契约 §4.10
+      "/audio": {
+        target: "http://127.0.0.1:8091",
+        changeOrigin: true,
+      },
+      // 用户上传（跟读录音、头像），后端 /uploads 静态目录
+      "/uploads": {
+        target: "http://127.0.0.1:8091",
+        changeOrigin: true,
+      },
     },
   },
 });

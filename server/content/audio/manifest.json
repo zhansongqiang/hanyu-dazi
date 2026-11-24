@@ -1,0 +1,168 @@
+{
+  "_note": "音频生成台账：记录每个 mp3 是按哪段文本合成的。content.json 里对应知识点的 text 一旦改动，必须重新生成该 mp3，再跑 scripts/audio-manifest.ts --write 更新此账；对不上时 import-content.ts 会告警。",
+  "voice": "zh-CN-XiaoxiaoNeural",
+  "rate": "-15%",
+  "generated_at": "2026-11-23",
+  "entries": {
+    "bi": {
+      "text": "笔",
+      "bytes": 7200
+    },
+    "da": {
+      "text": "大",
+      "bytes": 7488
+    },
+    "er": {
+      "text": "二",
+      "bytes": 7632
+    },
+    "hen-gaoxing-renshi-ni": {
+      "text": "很高兴认识你",
+      "bytes": 13536
+    },
+    "huo": {
+      "text": "火",
+      "bytes": 7632
+    },
+    "jintian": {
+      "text": "今天",
+      "bytes": 9072
+    },
+    "kou": {
+      "text": "口",
+      "bytes": 7488
+    },
+    "laoshi": {
+      "text": "老师",
+      "bytes": 9072
+    },
+    "mingtian": {
+      "text": "明天",
+      "bytes": 9072
+    },
+    "mingtian-jian": {
+      "text": "明天见",
+      "bytes": 10080
+    },
+    "ni-hao-ma": {
+      "text": "你好吗",
+      "bytes": 9216
+    },
+    "nihao": {
+      "text": "你好",
+      "bytes": 8352
+    },
+    "pengyou": {
+      "text": "朋友",
+      "bytes": 8784
+    },
+    "qing-zai-shuo-yibian": {
+      "text": "请再说一遍",
+      "bytes": 11952
+    },
+    "ren": {
+      "text": "人",
+      "bytes": 7200
+    },
+    "ri": {
+      "text": "日",
+      "bytes": 7488
+    },
+    "san": {
+      "text": "三",
+      "bytes": 7920
+    },
+    "shan": {
+      "text": "山",
+      "bytes": 8064
+    },
+    "shang": {
+      "text": "上",
+      "bytes": 7920
+    },
+    "shi": {
+      "text": "十",
+      "bytes": 8064
+    },
+    "shu": {
+      "text": "书",
+      "bytes": 8064
+    },
+    "shui": {
+      "text": "水",
+      "bytes": 7920
+    },
+    "tongxue": {
+      "text": "同学",
+      "bytes": 9216
+    },
+    "wo-bu-dong": {
+      "text": "我不懂",
+      "bytes": 9504
+    },
+    "wo-qu-jiaoshi": {
+      "text": "我去教室",
+      "bytes": 11232
+    },
+    "wo-shi-xuesheng": {
+      "text": "我是学生",
+      "bytes": 11088
+    },
+    "wo-xiang-he-shui": {
+      "text": "我想喝水",
+      "bytes": 11808
+    },
+    "xia": {
+      "text": "下",
+      "bytes": 7920
+    },
+    "xiao": {
+      "text": "小",
+      "bytes": 7632
+    },
+    "xiexie": {
+      "text": "谢谢",
+      "bytes": 8928
+    },
+    "xiexie-ni": {
+      "text": "谢谢你",
+      "bytes": 9936
+    },
+    "xuesheng": {
+      "text": "学生",
+      "bytes": 9216
+    },
+    "yi": {
+      "text": "一",
+      "bytes": 7200
+    },
+    "yue": {
+      "text": "月",
+      "bytes": 7488
+    },
+    "zaijian": {
+      "text": "再见",
+      "bytes": 8640
+    },
+    "zaoshang": {
+      "text": "早上",
+      "bytes": 8784
+    },
+    "zhe-shi-shenme": {
+      "text": "这是什么",
+      "bytes": 10368
+    },
+    "zhe-shi-wo-de-shu": {
+      "text": "这是我的书",
+      "bytes": 11520
+    },
+    "zhege-duoshao-qian": {
+      "text": "这个多少钱",
+      "bytes": 12240
+    },
+    "zhong": {
+      "text": "中",
+      "bytes": 7344
+    }
+  }
+}

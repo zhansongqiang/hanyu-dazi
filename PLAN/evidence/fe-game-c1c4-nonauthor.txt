@@ -1,0 +1,402 @@
+复核记录：content 泳道 C1–C4 的 **308 基线重签**（非作者出证）
+
+出证人：`fe-game`（本路）
+时间：2026-11-24 11:52 – 11:58 · 本机 · 全部 node / tsx 侧，未构建、未开浏览器、
+      未占用 8123 / 8124 / 5173 中任何一个（C1 的 HTTP 检查自起在 58391，跑完即关）
+夹具：一次性库 `D:\coding\hanyu-dazi\server\data\_verify308.db`（本路自建，用后即弃）
+语料钉：`server/content/content.json` md5 `39b48b8cb34dbadcd944a5fa391e5b29`
+        mtime 2026-11-24 10:37:07　22047 B —— 与 `hanyu-dazi-57` 10:54 取的那一份**同一钉**
+共用开发库 `server/data/hanyu-dazi.db` **本轮全程未被打开**。
+
+---
+
+## 一、非作者资格自核
+
+本路写集：`mobile/src/pages/{profile,rank,stamp,duel,team,user}/**`、
+`mobile/src/api/{xp,checkin,stamp,duel,team,user}.ts`、`server/src/routes/{xp,checkin,duel,team}.ts`。
+⇒ 对 `server/content/**`、`server/src/seeds/**`、`server/scripts/import-content.ts`、
+`server/src/migrations/**`、`server/src/routes/attempts.ts` **零字节**。
+
+bd 给的判据 `find server/content -newermt '2026-11-24 00:00'` 返回 2 条（目录本身 + `content.json`），
+命中 10:37:07 那次改动 —— 那是**编排者**的改动，不是本路的。该命令按 mtime 判定，
+**无法归属作者**，所以它**不能**用作「我零写入」的证明；上面那句写集陈述才是。
+（这条与 57 在其重取件 §够格自核 里的判断一致，我独立复核后采信。）
+
+`PLAN/content.md:161` 那一问 ——「需要一位**此刻**对 `server/content/**` 零字节的人」——
+本路符合；编排者（10:37:07 改过 `content.json`）已不符合，be-api 也符合但本轮由本路执行。
+
+---
+
+## 二、C1 —— 40 个音频（三个数分开报，不合成一个「40」）
+
+| 项 | 读数 | 判据 |
+|---|---|---|
+| `items where kind='listen'` | **40** | §8 硬指标 40 |
+| `items where kind='listen' and audio_url 非空` | **40 / 40** | 每道听力题都指得到音频 |
+| `server/content/audio/*.mp3`（磁盘） | **40** 个 | 文件确实在盘上 |
+| **HTTP 逐文件**：GET `/audio/<name>.mp3` 与磁盘比字节数 + md5 | **40/40 逐字节相同** | 接口真把 40 个字节原样发得出来 |
+
+HTTP 检查打在**真实 app** 上（`npx tsx src/index.ts`，`PORT=58391`，`DB_FILENAME=./data/_verify308.db`），
+走的是 `src/app.ts:23` 那条 `app.use('/audio', express.static(...))`，不是我自己另起的静态服务。
+
+    样本 bi.mp3：HTTP 200  7200 B  md5 445427b01d2ea3842af1a5e758cb13cf  == 磁盘 7200 B  md5 445427b01d2ea3842af1a5e758cb13cf  → 逐字节相同
+    样本 da.mp3：HTTP 200  7488 B  md5 6b96741fbc9a6e118b16eccc6909ef24  == 磁盘 7488 B  md5 6b96741fbc9a6e118b16eccc6909ef24  → 逐字节相同
+    样本 er.mp3：HTTP 200  7632 B  md5 71d3bd684060fe7b6384b239a4aa877b  == 磁盘 7632 B  md5 71d3bd684060fe7b6384b239a4aa877b  → 逐字节相同
+
+    Content-Type 集合 = ["audio/mpeg"]
+    逐文件比对：40/40 通过，0 不通过
+    404 兜底：/audio/__definitely-not-here__.mp3 → HTTP 404  Content-Type "application/json; charset=utf-8"  成立
+    C1_HTTP_EXIT=0
+
+> 与既有证据的差别（不是推翻，是补强）：`evidence/be-api-B6-static.txt` 当时只做了
+> **1 个全量字节比对**（`bi.mp3`）+ 3 个样本的大小，本轮把它推到 **40/40 全量逐字节 md5**，
+> 并补了 404 兜底与 Content-Type 全集合。两者结论一致。
+
+**C1 结论：✓ 通过（308 基线）**
+
+---
+
+## 三、C2 —— 答题反馈里真的有 hint
+
+    库文件：D:\coding\hanyu-dazi\server\data\_verify308.db
+    临时服务：http://127.0.0.1:58387（本进程内，跑完即关）
+    探针题目：#1 [recognize] 知识点 ri 「日」→ rì
+    content.json 里的 hint：「太阳的样子，中间那一点是它的光。」
+    库里 items.hint ：「太阳的样子，中间那一点是它的光。」
+
+    注册 c2check390820：HTTP 200 code=0 已拿到 token
+
+    【答错】HTTP 200 code=0
+      {"isCorrect":false,"answer":"rì","xpEarned":2,"hint":"太阳的样子，中间那一点是它的光。","wrongTimes":1,"badge":null}
+    【答对】HTTP 200 code=0
+      {"isCorrect":true,"answer":"rì","xpEarned":10,"hint":"太阳的样子，中间那一点是它的光。","wrongTimes":1,"badge":null}
+
+    断言：
+      ✓ 答错时 后端复判 isCorrect === false
+      ✓ 答错时 hint 非空
+      ✓ 答对时 hint 非空（契约 §4.2 的示例就是答对也带）
+      ✓ 两次的 hint 都与 items.hint 逐字相同（不是拼接、不是截断）
+      ✓ 接口回的 hint 就是 content.json 那一句（唯一真相源，逐字相同）
+      ✓ 答错发的 XP 与答对不同（2 / 10，来自 constants）
+
+    C2 通过：0 条不成立        C2_EXIT=0
+
+另：`items.hint` 非空 **308 / 308**（分母从 296 涨到 308，无一漏 hint）。
+
+**C2 结论：✓ 通过（308 基线）**
+
+---
+
+## 四、C3 —— 15 枚印章，恒 false 的 0 枚
+
+    印章 15 枚，恒 false 的 0 枚
+    库里单元 6 个：advanced-char-radical, advanced-word-city, basic-char, basic-sentence, basic-word, extended-dialogue-daily
+
+    按 kind 拆（本路只读直数）：unit=6  stroke=3  streak=3  xp=3  合计 15
+    （unit 名：unit-basic-char / -basic-word / -basic-sentence / -advanced-char-radical /
+      -advanced-word-city / -extended-dialogue-daily；stroke 3 枚；streak 3/7/14；xp 500/1500/3000）
+
+    C3_EXIT=0
+
+⚠️ 「15」的算法必须说清：它是 `achievements whereIn kind ['unit','stroke','streak','xp']` 的**行数**，
+**不是**全表 `count(*)` —— 两者当前同值（15），但语义不同，换 kind 就会分叉。
+
+另：`PLAN/content.md:115-124` 的 **CR-01**（`streak` 章的结算时机缺陷）**不影响本格读数** ——
+C3 验的是「15 枚章在库里且判定源可达」，不是「每枚都拿得到」。CR-01 是另一条，仍挂着。
+
+**C3 结论：✓ 通过（308 基线）**
+
+---
+
+## 五、C4 —— 从零建库，连跑**四**遍导入
+
+    $ DB_FILENAME=./data/_verify308.db npx tsx src/migrate.ts
+      → exit=0，batch 1，5 个迁移：20261123090000_reused_core / 20261123150000_course_core /
+        20261123160000_content_keys / 20261123160001_items_hint / 20261123170000_reports
+    $ ... npx tsx scripts/import-content.ts     # #1  知识点 80（写了 hint 80）
+                                                      单元 新增 6；课时 新增 20；题目 新增 308；印章 新增 15
+    $ ... npx tsx scripts/import-content.ts     # #2  单元/课时/题目 新增全 0（更新 6 / 20 / 308）；印章 未变 15
+    $ ... npx tsx scripts/import-content.ts     # #3  与 #2 **逐字相同**（diff 为空）
+    $ ... npx tsx scripts/import-content.ts     # #4  与 #3 **逐字相同**（diff 为空）
+    $ ... npx tsx scripts/content-audit.ts      # exit=0，校验和 57b07b05756720b3，「没有发现问题」
+
+行数：`units` 6 · `lessons` 20 · `items` 308 · `distinct point_key` **80**（§8 要求 60–80 ✓）
+按 kind：`recognize` 80 · `pinyin` 80 · `meaning` 80 · `listen` 40 · `stroke` 28
+
+内容层指纹（**第 3 遍后**与**第 4 遍后**各取一次，**逐字相同**）：
+
+| 口径 | 308 基线（本路读数） |
+|---|---|
+| A：`md5(JSON.stringify(rows))`，`rows` = `select id, point_key, kind, options, answer, sort, hint from items order by id` 的 better-sqlite3 行对象 | **`bb1cb1d59274972cd0b264f53ae2f4f1`** |
+| B：`\u0001` 内分隔 + `\u0002` 行终结（`c-recheck.cjs` 口径） | **`93fa59d1f5b78656842174513fc8c52f`** |
+
+行对象键序实测 = `["id","point_key","kind","options","answer","sort","hint"]`（即 select 列序）。
+
+**C4 结论：✓ 通过（幂等成立，行数层 + 内容层，且内容层压到第 4 遍）**
+
+---
+
+## 六、口径问题：两个数都复现了，且**不互比**
+
+本路在 **8 只互不相干的库**上把两个口径各跑了一遍（脚本只读打开、一字节不写）：
+
+| 库 | 时间 | 题数 | 口径 A | 口径 B |
+|---|---|---|---|---|
+| `%TEMP%\hd-vfy\fx\fixture.db` | 07:28 | 296 | `46aa0ee9baa74492ad01cfb626ae50c9` | `132052f7a31d0535dee6e56e3c21856e` |
+| `%TEMP%\hd-vfy\fx2\hint.db` | 07:29 | 296 | `46aa0ee9baa74492ad01cfb626ae50c9` | `132052f7a31d0535dee6e56e3c21856e` |
+| `%TEMP%\hd-vfy\fx3\fixture.db` | 10:20 | 296 | `46aa0ee9baa74492ad01cfb626ae50c9` | `132052f7a31d0535dee6e56e3c21856e` |
+| `%TEMP%\hd-vfy\fx-be2\fixture.db` | 10:25 | 296 | `46aa0ee9baa74492ad01cfb626ae50c9` | `132052f7a31d0535dee6e56e3c21856e` |
+| `%TEMP%\hd-vfy\fx-tone\fixture.db` | 10:37:53 | 308 | `bb1cb1d59274972cd0b264f53ae2f4f1` | `93fa59d1f5b78656842174513fc8c52f` |
+| `%TEMP%\hd-vfy\fx-c4\recheck.db` | 10:52 | 308 | `bb1cb1d59274972cd0b264f53ae2f4f1` | `93fa59d1f5b78656842174513fc8c52f` |
+| `%TEMP%\hd-vfy\fx-render\fixture.db` | 11:20 | 308 | `bb1cb1d59274972cd0b264f53ae2f4f1` | `93fa59d1f5b78656842174513fc8c52f` |
+| `server\data\_verify308.db`（本轮验收库） | 11:55 | 308 | `bb1cb1d59274972cd0b264f53ae2f4f1` | `93fa59d1f5b78656842174513fc8c52f` |
+
+⇒ 两个口径**各自四库同值**（296 列四只跨 07:28→10:25；308 列四只跨 10:37→11:55），
+每列都**确定**、都**可复现**。两列之间的差值**只来自拼接算法，不来自数据**，不可互比。
+
+### 需要更正的一条既有记录
+
+`%TEMP%\hd-fe-lane\content-C1C4-recheck-20261124.txt:39-41`（`hanyu-dazi-57`）写着：
+
+> 「…在 296 夹具上枚举 15 种口径亦无一命中。⇒ 旧值 `46aa0ee9…` 从当前工作树**无法复现**。」
+
+**这句按字面不成立**：本路用 `PLAN/content.md:87-103` 那条已钉死的**口径 A**，
+在 **4 只** 296 库上逐字复现出 `46aa0ee9baa74492ad01cfb626ae50c9`（上表前四行）。
+57 枚举的 15 种读法是她自己围绕**口径 B 的构造**变体；她读的是 `PLAN/content.md:78-79` 那段散文，
+没读到 `:87-103` 的《口径补记》—— 而 `:87-103` 正是 11:1x 为补掉这段散文的歧义而写的，
+其中 `:98-99` 已记「旧值可复现、且跨 8 小时稳定」。
+
+⇒ 结论应更正为：**旧值可复现，但只在口径 A 下**；口径 B 下 296 的值是 `132052f7…`。
+57 另一句「那行不能作为比对基线，必须连同**约定**一起重写」**是对的，而且已经办了**（`:87-103`）。
+
+（本路自陈：本条是**更正别人的记录**，不是更正数据 —— 8 只库的读数本路亲跑，非采信。）
+
+---
+
+## 七、脚本全文（bd 要求：写完贴源）
+
+两个脚本都在 `%TEMP%\hd-vfy\` 下，**不进 repo 写集**。
+
+### 7.1 `my-c14.cjs` —— C1/C2/C3/C4 的行数与双口径指纹（只读）
+
+```js
+/* fe-game（会话 fe-game）非作者复核：content 泳道 C1–C4 在新语料上的独立重取
+ * 只读打开夹具库，一个字节不写。
+ * 用法：node my-c14.cjs <fixture.db>
+ * 两个口径都给，且**不互比**：
+ *   口径 A = PLAN/content.md:87-103 钉死的那一条（better-sqlite3 行对象整体 JSON.stringify）
+ *   口径 B = 量具 c-recheck.cjs 的读法（\u0001 内分隔 + \u0002 行终结）
+ */
+const Database = require('D:/coding/hanyu-dazi/server/node_modules/better-sqlite3');
+const crypto = require('crypto');
+const fs = require('fs');
+
+const DBF = process.argv[2];
+if (!DBF) { console.error('用法: node my-c14.cjs <fixture.db>'); process.exit(2); }
+const db = new Database(DBF, { readonly: true });
+const q1 = (s, ...a) => db.prepare(s).get(...a);
+const qa = (s, ...a) => db.prepare(s).all(...a);
+
+console.log('库: ' + DBF);
+console.log('');
+
+const items = q1('select count(*) c from items').c;
+const listen = q1("select count(*) c from items where kind='listen'").c;
+const listenAudio = q1("select count(*) c from items where kind='listen' and audio_url is not null and trim(audio_url) <> ''").c;
+const hintNE = q1("select count(*) c from items where hint is not null and trim(hint) <> ''").c;
+const ach = q1('select count(*) c from achievements').c;
+const achKinds = qa("select kind, count(*) n from achievements group by kind order by kind")
+  .map(r => r.kind + '=' + r.n).join(' ');
+
+console.log('【C1】kind=listen = ' + listen + ' ／ 其中带 audio_url = ' + listenAudio);
+console.log('【C2】items.hint 非空 = ' + hintNE + ' / ' + items);
+console.log('【C3】achievements = ' + ach + '（按 kind 拆：' + achKinds + '）');
+console.log('【C4】units = ' + q1('select count(*) c from units').c
+  + ' · lessons = ' + q1('select count(*) c from lessons').c
+  + ' · items = ' + items
+  + ' · distinct point_key = ' + q1('select count(distinct point_key) c from items').c);
+console.log('       按 kind 拆：' + qa('select kind, count(*) n from items group by kind order by kind')
+  .map(r => r.kind + '=' + r.n).join(' '));
+
+const rows = qa('select id, point_key, kind, options, answer, sort, hint from items order by id');
+console.log('       行对象键序 = ' + JSON.stringify(Object.keys(rows[0])));
+
+// ---- 口径 A ----
+const md5A = crypto.createHash('md5').update(JSON.stringify(rows)).digest('hex');
+// ---- 口径 B ----
+const hB = crypto.createHash('md5');
+for (const r of rows) {
+  hB.update([r.id, r.point_key, r.kind, r.options, r.answer, r.sort, r.hint].map(v => String(v)).join('\u0001'));
+  hB.update('\u0002');
+}
+const md5B = hB.digest('hex');
+
+console.log('');
+console.log('口径 A（JSON.stringify(rows)，content.md:87-103）= ' + md5A);
+console.log('口径 B（\\u0001/\\u0002，c-recheck.cjs）       = ' + md5B);
+
+// ---- 磁盘侧 ----
+const audioDir = 'D:/coding/hanyu-dazi/server/content/audio';
+const mp3 = fs.existsSync(audioDir) ? fs.readdirSync(audioDir).filter(f => f.toLowerCase().endsWith('.mp3')) : [];
+console.log('');
+console.log('【C1 磁盘】content/audio/*.mp3 = ' + mp3.length + ' 个');
+
+db.close();
+```
+
+### 7.2 `c1-audio-http.cjs` —— C1 的 HTTP 逐文件字节比对
+
+```js
+/* fe-game 非作者复核：content 泳道 C1 的 HTTP 逐文件检查
+ *
+ * 目的：C1 不只是「磁盘上有 40 个 mp3」，还要证明**接口真的把这 40 个字节原样发得出来**。
+ * 做法：对**真实 app**（src/index.ts 起的服务，含真实路由与中间件）逐个 GET /audio/<point_key>.mp3，
+ *       与磁盘文件比字节数与 md5，并记录 Content-Type；再做一次 404 兜底检查。
+ * 不需要任何 repo 内的 import —— 服务另起，本脚本只发 HTTP。
+ *
+ * 用法：node c1-audio-http.cjs <baseUrl> <audioDir>
+ * 退出码：0 = 40/40 全等 + 404 兜底成立；1 = 有不等；2 = 用法/环境错。
+ */
+const http = require('http');
+const fs = require('fs');
+const path = require('path');
+const crypto = require('crypto');
+
+const base = process.argv[2];
+const dir = process.argv[3];
+if (!base || !dir) { console.error('用法: node c1-audio-http.cjs <baseUrl> <audioDir>'); process.exit(2); }
+if (!fs.existsSync(dir)) { console.error('音频目录不存在: ' + dir); process.exit(2); }
+
+function get(url) {
+  return new Promise((resolve, reject) => {
+    http.get(url, res => {
+      const chunks = [];
+      res.on('data', c => chunks.push(c));
+      res.on('end', () => resolve({ status: res.statusCode, headers: res.headers, body: Buffer.concat(chunks) }));
+    }).on('error', reject);
+  });
+}
+const md5 = b => crypto.createHash('md5').update(b).digest('hex');
+
+(async () => {
+  const files = fs.readdirSync(dir).filter(f => f.toLowerCase().endsWith('.mp3')).sort();
+  console.log('baseUrl   = ' + base);
+  console.log('audioDir  = ' + dir);
+  console.log('磁盘 mp3  = ' + files.length + ' 个');
+  console.log('');
+
+  let ok = 0, bad = 0;
+  const ctSet = new Set();
+  for (const f of files) {
+    const disk = fs.readFileSync(path.join(dir, f));
+    const r = await get(base + '/audio/' + encodeURIComponent(f));
+    const ct = String(r.headers['content-type'] || '');
+    ctSet.add(ct);
+    const same = r.status === 200 && r.body.length === disk.length && md5(r.body) === md5(disk);
+    if (same) { ok++; }
+    else {
+      bad++;
+      console.log('  [FAIL] ' + f + '  HTTP ' + r.status
+        + '  取回 ' + r.body.length + ' B / ' + md5(r.body)
+        + '  vs 磁盘 ' + disk.length + ' B / ' + md5(disk));
+    }
+  }
+  // 打印前 3 个样本的逐字节读数，供记录里留痕
+  for (const f of files.slice(0, 3)) {
+    const disk = fs.readFileSync(path.join(dir, f));
+    const r = await get(base + '/audio/' + encodeURIComponent(f));
+    console.log('  样本 ' + f + '：HTTP ' + r.status + '  ' + r.body.length + ' B  md5 ' + md5(r.body)
+      + '  == 磁盘 ' + disk.length + ' B  md5 ' + md5(disk) + '  → ' + (md5(r.body) === md5(disk) ? '逐字节相同' : '不同'));
+  }
+  console.log('');
+  console.log('  Content-Type 集合 = ' + JSON.stringify([...ctSet]));
+  console.log('  逐文件比对：' + ok + '/' + files.length + ' 通过，' + bad + ' 不通过');
+
+  // 404 兜底：不存在的音频必须 404，且不能回一段音频
+  const missing = await get(base + '/audio/__definitely-not-here__.mp3');
+  const notAudio = !/^audio\//.test(String(missing.headers['content-type'] || ''));
+  console.log('  404 兜底：/audio/__definitely-not-here__.mp3 → HTTP ' + missing.status
+    + '  Content-Type ' + JSON.stringify(String(missing.headers['content-type'] || ''))
+    + '  ' + (missing.status === 404 && notAudio ? '成立' : '不成立'));
+
+  const pass = bad === 0 && files.length === 40 && ok === 40
+    && ctSet.size === 1 && ctSet.has('audio/mpeg')
+    && missing.status === 404 && notAudio;
+  console.log('');
+  console.log(pass ? 'C1_HTTP_EXIT=0 全部成立' : 'C1_HTTP_EXIT=1 有断言不成立');
+  process.exit(pass ? 0 : 1);
+})().catch(e => { console.error('自检崩了: ' + (e && e.stack || e)); process.exit(2); });
+```
+
+原始输出留在 `%TEMP%\hd-vfy\`：`my-c14-*.out.txt`（8 只库）、`c14-{mig,imp1,imp2,imp3,imp4}.out.txt`、
+`c14-{c2,c3}.out.txt`、`c14-c1-http.out.txt`、`c14-audit.out.txt`、`c1-server.log`。
+
+---
+
+## 八、没证明的（照 §八 如实记）
+
+1. **没做 options / answer 的逐字段 diff。** 幂等只压到「行数层 + 两个口径的全表 md5」；
+   md5 相同**强烈蕴含**逐字段相同，但本路没有把 308 行逐字段摊开比对。这条与 57 的第 3 条同。
+2. **没验 `content-audit.ts` 校验和的确定性变化。** 旧值 `77b03ed4ae0e63a8` → 新值 `57b07b05756720b3`，
+   本路**没有**复现旧值，所以「校验和随语料确定性变化」这一条仍未证明。（与 57 同）
+3. **没跑 C2 的「拒绝共用库」分支。** 本轮 `check-hint-feedback.ts` 直接指到一次性库上正常跑完
+   （`C2_EXIT=0`）；那条守卫的 exit=2 行为本路**没有**单独复跑，采信 `PLAN/content.md:66-68` 的既有记录。
+4. **没审 CR-01 的修法。** `routes/checkin.ts` 在**本路写集内**，但本轮只做复核、没动代码、没验修法。
+   （顺带在 308 基线上**重跑了复现**，见 §九 —— 缺陷仍在，但**修法未动**。）
+5. **本条复核不能替代 fe-learn 那四条的判定。** 本件只覆盖 C1–C4。
+
+---
+
+## 九、顺带：CR-01 在 308 基线上的重跑（只重跑，未改代码）
+
+C1–C4 复核时顺手把 content 的复现脚本在**同一批 308 语料**上重跑了一遍，确认这条缺陷
+**没有**被 10:37 的语料扩容带上或抹掉。夹具同为一次性库、**共用开发库未打开**：
+
+    $ DB_FILENAME='C:/Users/Admin/AppData/Local/Temp/hd-vfy/streak308.db' npx tsx src/migrate.ts
+    MIG_EXIT=0
+    $ …… npx tsx scripts/import-content.ts
+    IMP_EXIT=0
+    $ …… npx tsx scripts/check-streak-timing.ts
+    PROBE_EXIT=1
+
+    streak 章定义： streak-3(≥3)  streak-7(≥7)  streak-14(≥14)
+
+    A. 打卡：连击 2 → 3，XP +5
+       ⚠ FAIL —— 连击已到 3，打卡后却没发 streak-3（打卡路径不结算印章）
+
+    B. 事后调 evaluate()（缓解路径）：新解锁 = streak-3
+    C. 曾连续 3 天但当时没人结算，之后断签（last=2026-11-21）再打卡：
+       touch() 把连击打回 1（max_streak 仍记着 3）
+       再 evaluate() 后手上的 streak 章：（无）  ← 永久拿不到，尽管确实连续过 3 天
+
+    结论：缺陷仍在（A 未通过）
+
+⇒ 与 `evidence/content-streak-timing.txt`（296 时点）**逐字同一结论**，只是日期随当天推移。
+**这条不是本件的验收项**（§八·4），此处只作时点补记；**修法本路一字未动**
+（落点待编排者/用户拍板，见 `content.md:113-124`、`round7-orchestrator-changes.md:347-348`）。
+
+读这条时请注意一个取舍要点（不是新发现，但值得摆在拍板的人面前）：
+内容方给的最小改法是「`touch()` 之后补一次 `evaluate()`」，它让 **A 转绿**、
+即**此后不再漏章**；但 **C 不会被它修好** —— 判定源仍是会倒退的 `current_streak`，
+已经错过结算窗口的用户即便补跑 `evaluate()` 也拿不到了（要覆盖 C 得把判定源改成
+`max_streak`，那是**改 §4.7 的判定规则**，不是你我能定的）。
+**不过在本项目当前的时点上 C 无真实受害者**：系统尚未上线部署，库里只有开发账号
+（`xiaoming` / `pfd5c0q`），不存在「上线后被漏掉章的用户」。所以最小改法够用。
+
+---
+
+## 十、边界
+
+- 未运行任何构建（`vite build` / `uni build`）；未改任何 repo 文件（本件是新增证据文件）；
+  未改 `PLAN/content.md` 的**状态词**；未碰共用开发库、`server/.env`、`ecosystem.config.js`。
+- 本路对 content 泳道是**非作者**，故本件可以出证；但**CR-01 的修法**属 `routes/checkin.ts`（本路作者），
+  那一条本路**不能自验收**。
+- **补一条关于 CR-01 落点的事实（复核 C1–C4 时读到，供拍板的人用）**：§4.7 指定的验收脚本
+  `server/scripts/check-streak-timing.ts` **不经过 Express 路由** ——
+  `:24` `import { touch } from '../src/services/checkin';`、`:25` `import { evaluate } from '../src/services/stamps';`、
+  `:77` `const ra = await touch(a, null); // ← \`POST /checkin\` 的全部副作用就是这一行`。
+  ⇒ `content.md:119`「修好后 A 自动转绿、退出码 1→0」**只对落在 `services/checkin.ts:34 touch()` 内部的修法成立**；
+  若修在 `routes/checkin.ts`（本路写集），该脚本仍会 `PROBE_EXIT=1`，这一条**修了也关不掉**，
+  须同时另写一个走 HTTP 的验收脚本。项目里两种形态都有先例：`services/attempt.ts:140` 是**在 service 内**结算，
+  `routes/attempts.ts:178` 是**在路由内**结算（幂等，重复调用无害）。
+  **本路对这个落点没有决定权，也没有动代码**；此处只留事实。

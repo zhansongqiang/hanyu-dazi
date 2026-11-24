@@ -1,0 +1,71 @@
+# B2 验收断言 · 答题提交（POST /attempts、POST /lessons/:id/finish）
+
+生成时间(本地)   : 2026-11-23 22:46:55
+目标             : http://127.0.0.1:8099（本地开发后端，仅 loopback）
+数据库           : C:\Users\Admin\AppData\Local\Temp\hd-beapi-fixture-b9eEN9\fixture.db（夹具一次性库，与后端同一文件；脚本用只读连接）
+夹具目录         : C:\Users\Admin\AppData\Local\Temp\hd-beapi-fixture-b9eEN9
+测试账号         : id=1 username=beapi_probe nickname=beapi 断言探针
+鉴权             : 夹具模式：经 POST /auth/register 现建探针账号并取回 token（该端点无限流，回避 5/min 的 /auth/login）
+被断言的进程     : pid=25216，启动于 2026-11-23 22:46:54，监听 127.0.0.1:8099
+源码 mtime(UTC)  : 
+                   src/routes/content.ts = 2026-11-23 08:55:07
+                   src/routes/attempts.ts = 2026-11-23 08:58:58
+                   src/routes/wrongbook.ts = 2026-11-23 08:57:18
+                   src/routes/progress.ts = 2026-11-23 08:57:35
+                   src/routes/index.ts = 2026-11-23 08:49:23
+                   src/app.ts = 2026-11-23 08:49:25
+                   src/services/item.ts = 2026-11-23 08:56:57
+断言人           : be-api（本单元作者）。本文件是**自测取证**，不是验收结论 ——
+                   状态仍停在「待验收」，须由非作者复核后才可改「已验收」。
+脚本             : %TEMP%\hd-beapi-assert.cjs（临时脚本，不入仓库）
+
+【前置数据构造】
+【核心取证】作答请求体里**故意夹带** isCorrect:true / lessonId:999 / xpEarned:999，用于证明后端完全自行复判、不采信前端。
+本单元会产生真实写入：attempts 2 行、xp_events 2 行、lesson_progress 1 行、checkins 1 行。
+DB 起点计数：attempts=0 xp_events=0 lesson_progress=0 checkins=0
+
+== B2 · 答题提交（M2 Day 2）· 服务端判题 / 课时结算 / 打卡 ==
+  [PASS] POST /api/attempts（故意答错 + 夹带伪造字段）→ HTTP 200 且 code=0   → HTTP 200 code=0
+  POST /attempts 原文（请求体夹带了 isCorrect:true / lessonId:999 / xpEarned:999）: {"isCorrect":false,"answer":"rì","xpEarned":2,"hint":"太阳的样子，中间那一点是它的光。","wrongTimes":1,"badge":null}
+  [PASS] POST /attempts 的 data：字段集与契约逐字一致   → 期望 6 项 / 实得 6 项
+  [PASS] 【关键】返回 isCorrect:false —— 请求体里的 isCorrect:true 没被采信（后端自己复判）   → 实测 false
+  [PASS] answer 回的是库内正确答案（供前端展示）   → "rì" vs 库内 "rì"
+  [PASS] 答错 XP = .env 的 XP_PER_WRONG   → 2 vs 2
+  [PASS] hint 来自 items.hint 且非空   → "太阳的样子，中间那一点是它的光。"
+  [PASS] wrongTimes 来自 wrong_book 视图，首次答错为 1   → 1
+  [PASS] badge 为 null 或 {code,name}   → null
+  库内最新 attempts 行: {"id":1,"user_id":1,"item_id":1,"lesson_id":1,"is_correct":0,"user_answer":"__wrong__","duration_ms":2400,"created_at":"2026-11-23 22:46:55"}
+  [PASS] attempts.user_id 取自 token（req.userId）   → 1
+  [PASS] attempts.item_id 记录正确   → 1
+  [PASS] 【关键】attempts.lesson_id 由 item 反查得到 1，而非请求体里的 999   → 1
+  [PASS] attempts.is_correct 落库为假   → 0
+  [PASS] attempts.created_at 是本地时间 'YYYY-MM-DD HH:mm:ss' 且为今天（非 UTC、非毫秒）   → 2026-11-23 22:46:55
+  库内最新 xp_events 行: {"id":1,"user_id":1,"amount":2,"reason":"wrong","ref_type":"item","ref_id":1,"note":null,"created_at":"2026-11-23 22:46:55"}
+  [PASS] xp_events 落 reason='wrong' / ref_type='item' / ref_id=itemId / amount=XP_PER_WRONG   → [2,"wrong","item",1]
+  POST /attempts（同一题改答对）原文: {"isCorrect":true,"answer":"rì","xpEarned":10,"hint":"太阳的样子，中间那一点是它的光。","wrongTimes":1,"badge":null}
+  [PASS] 改答对 → isCorrect:true 且 XP = XP_PER_CORRECT   → [true,10]
+  [PASS] 答对一次后 wrongTimes 仍为 1（错题仍在册，correct_since 才 +1）   → 1
+  库内 wrong_book(item 1) 行: {"user_id":1,"item_id":1,"wrong_times":1,"last_wrong_at":"2026-11-23 22:46:55","correct_since":1}
+  [PASS] wrong_book 视图：correct_since=1 / wrong_times=1（视图行为与 §3.2 一致）   → {"user_id":1,"item_id":1,"wrong_times":1,"last_wrong_at":"2026-11-23 22:46:55","correct_since":1}
+  [PASS] POST /api/lessons/1/finish → HTTP 200 且 code=0   → HTTP 200 code=0
+  POST /lessons/1/finish（5/5）原文: {"lessonId":1,"status":"done","bestScore":5,"bestTotal":5,"firstDone":true,"xpEarned":20,"checkin":{"created":true,"currentStreak":1,"xpEarned":5},"nextLessonId":2,"unitDone":false}
+  [PASS] POST /lessons/:id/finish 的 data：字段集与契约逐字一致   → 期望 9 项 / 实得 9 项
+  [PASS] 5/5 = 1.0 ≥ 0.6 → status:"done"   → [1,"done"]
+  [PASS] bestScore/bestTotal 写为 5/5   → [5,5]
+  [PASS] firstDone:true（首次完成）   → true
+  [PASS] 课时奖励 XP = XP_PER_LESSON   → 20 vs 20
+  [PASS] finish.checkin：字段集与契约逐字一致   → 期望 3 项 / 实得 3 项
+  [PASS] 完成课时自动打卡：created:true、currentStreak:1   → {"created":true,"currentStreak":1,"xpEarned":5}
+  [PASS] nextLessonId 指向同单元下一课（2）   → 2
+  [PASS] unitDone:false（单元 1 共 3 课，才完成 1 课）   → false
+  POST /lessons/1/finish（1/5，故意考比率比较）原文: {"lessonId":1,"status":"done","bestScore":5,"bestTotal":5,"firstDone":false,"xpEarned":0,"checkin":{"created":false,"currentStreak":1,"xpEarned":0},"nextLessonId":2,"unitDone":false}
+  [PASS] 【关键】1/5 不把已 done 的课时打回未完成（status 不回退）   → done
+  [PASS] 【关键】best_score 按比率比较：1*5 > 5*5 为假 → 不回退，仍 5/5   → [5,5]
+  [PASS] 非首次完成：firstDone:false 且不再发课时 XP   → [false,0]
+  库内 lesson_progress(lesson 1) 行: {"id":1,"user_id":1,"lesson_id":1,"status":"done","best_score":5,"best_total":5,"attempts_count":2,"last_item_id":1,"completed_at":"2026-11-23 22:46:55","created_at":"2026-11-23 22:46:55","updated_at":"2026-11-23 22:46:55"}
+  [PASS] lesson_progress 落库 status=done / best_score=5 / best_total=5   → ["done",5,5]
+  [PASS] lesson_progress.attempts_count 逐次 +1（本次 2 次作答）   → 2
+  [PASS] lesson_progress.last_item_id 更新为最近作答的题   → 1
+  [PASS] 不存在的题 /attempts(itemId=99999) → 404 且 code=1   → HTTP 404 code=1
+  [PASS] 缺少 itemId → 400 且 code=1   → HTTP 400 code=1
+  [PASS] total=0 → 400 且 code=1（除零守卫）   → HTTP 400 code=1

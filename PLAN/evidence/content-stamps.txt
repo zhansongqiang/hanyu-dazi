@@ -1,0 +1,29 @@
+# 证据 · C3 印章定义种子
+
+单元：C3 印章定义种子（泳道 content，里程碑 M3，计划 Day 3）
+验收标准：`select count(*) from achievements` = 15（§8 要求 ≥12）
+验收人：orchestrator（**非作者**）
+时间：2026-11-23
+结论：**通过**
+
+## 命令 1 —— 计数（只读，readonly 打开）
+
+    --- 内容表 ---
+      units        6
+      lessons      19
+      achievements 15
+
+## 命令 2 —— 样例三行
+
+    {"id":1,"code":"unit-basic-char","name":"初识汉字","description":"学完「象形入门」的全部课时","kind":"unit","ref_key":"basic-char","threshold":null,"sort":1}
+    {"id":2,"code":"unit-basic-word","name":"生活词汇","description":"学完「日常词汇」的全部课时","kind":"unit","ref_key":"basic-word","threshold":null,"sort":2}
+    {"id":3,"code":"unit-basic-sentence","name":"开口说话","description":"学完「开口说话」的全部课时","kind":"unit","ref_key":"basic-sentence","threshold":null,"sort":3}
+
+## 判定
+
+15 ≥ 12，**通过**。契约 §3.1 记的"`achievements` 现在 0 行"已消除，
+种子文件 `server/src/seeds/stamps.seed.ts`（content 独占路径）已在位。
+
+## 仍未验的部分
+
+fe-game 的 G3（印章页把未得的章画成灰态）依赖本单元，但**不属于**本单元 —— 归 G3，未测。

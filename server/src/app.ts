@@ -1,5 +1,6 @@
 import express, { ErrorRequestHandler } from 'express';
 import cors from 'cors';
+import path from 'path';
 import routes from './routes';
 import { fail } from './utils/response';
 import logger from './utils/logger';
@@ -14,6 +15,13 @@ app.use(express.urlencoded({ extended: true }));
 app.get('/health', (_req, res) => {
   res.json({ code: 0, message: 'ok', data: { status: 'up', ts: new Date().toISOString() } });
 });
+
+// 静态资源：听音题的音频 + 用户上传(跟读录音/头像)
+// 契约 §4.10。必须挂在 404 兜底之前，否则会被 404 吃掉。
+// 音频目录：server/content/audio/<point.key>.mp3（由 content 侧生成）
+// 上传目录：.env 的 UPLOAD_DIR，相对 process.cwd()
+app.use('/audio', express.static(path.join(__dirname, '..', 'content', 'audio')));
+app.use('/uploads', express.static(path.join(process.cwd(), process.env.UPLOAD_DIR || './uploads')));
 
 // 业务路由(全部挂在 /api 下)
 app.use('/api', routes);

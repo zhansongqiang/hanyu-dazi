@@ -1,0 +1,157 @@
+# 证据 · 边界补测（G6 小组 8 人上限 / G5 对战过期）
+
+泳道：fe-game
+单元：G6（8 人上限）、G5（过期语义）
+时间：2026-11-24 00:18
+**取证方式：作者自测（fe-game 本人跑）—— 这不是「已验收」。**
+「已验收」按 `plan.html` §十二·七 只能由非作者写；本文件只是本路交出的可复核凭据。
+
+## 这一轮补的是什么
+
+`evidence/fe-game-g5-g6.txt` 的「仍未验」里，本路自己列了两条**能验而没验**的：
+
+1. **8 人上限**：`TEAM_MAX_MEMBERS=8` 的满员拒绝**没实测**（要造 8 个账号），只读了代码。
+2. **过期**：`expires_at` 过期后转 `expired` 是"读的时候算"的，没造过期数据验。
+
+这两条都是**接口侧**就能问到底的问题，与产物/真机无关，所以本轮补齐。
+（同文件里第三条「APK/H5 打包」属编排者禁跑的构建，**仍然没验**，见文末。）
+
+## 环境与方法
+
+**临时库从哪来（重要，别跳过）**：
+共享库 `data/hanyu-dazi.db` 主文件只有 254 KB，而 `hanyu-dazi.db-wal` 有 **4.1 MB** ——
+也就是说**大部分已提交的数据还在 WAL 里，没并进主文件**。直接 `cp` 主文件会拷到一个残库。
+所以用 SQLite 的在线快照，**不停任何进程、不碰共享库**：
+
+    cd server && npx tsx -e "import db from './src/config/database'; \
+      db.raw(\"VACUUM INTO './data/tmp-edge.db'\").then(() => db.destroy()).then(() => process.exit(0))"
+    # → VACUUM_OK，产物 270336 字节
+
+（这顺带**独立佐证了 CLAUDE.md 里那条教训**：不 checkpoint 就传 `.db` = 丢数据。）
+
+**副本完整性核对**（改不动共享库，所以只在副本上核对）：
+
+    users=[{"id":1,"username":"xiaoming"},{"id":4,"username":"pfd5c0q"}]
+    counts={"lessons":19,"items":296,"units":6,"team_members":0,"teams":0,"duels":0,"xp_events":171}
+
+**隔离实例**（端口与共享的 8091 不同，库也不同）：
+
+    cd server && PORT=8099 HOST=127.0.0.1 DB_FILENAME=./data/tmp-edge.db AUTO_MIGRATE=false npx tsx src/index.ts
+    # 启动日志逐字：[DB] 连接成功 (client=sqlite3, file=./data/tmp-edge.db)
+    #             [Server] 汉语搭子 后端启动: http://127.0.0.1:8099
+
+- 账号一律走 `POST /auth/register`，**不碰 `/login`**（loginLimiter 每分钟 5 次，是 CLAUDE.md 记着的坑）。
+- 脚本 `.smoke-edge.ts` / 核对脚本 `.check-edge.ts` 都是**临时文件，跑完即删**。
+- 过期那一步要"把 `expires_at` 改到过去"，是**直接写临时库**（`db('duels').where({code}).update(...)`），
+  **没有碰共享库、没有碰任何别人的文件**，也没改任何一行业务代码。
+
+## 命令
+
+    cd server && DB_FILENAME=./data/tmp-edge.db npx tsx .smoke-edge.ts
+    # exit=0
+
+## 输出（逐字）
+
+    === A. 小组 8 人上限（TEAM_MAX_MEMBERS=8，契约 §4.8） ===
+    [注册] 队长 id=15 code=0
+    [建组] code=0 teamId=3 邀请码=6FXAML memberCount=1
+    [PASS] A0 建组成功、memberCount=1
+    [加入#1] userId=16 http=200 code=0 memberCount=2 message=ok
+    [PASS] A1 第 1 个加入成功
+    [加入#2] userId=17 http=200 code=0 memberCount=3 message=ok
+    [PASS] A2 第 2 个加入成功
+    [加入#3] userId=18 http=200 code=0 memberCount=4 message=ok
+    [PASS] A3 第 3 个加入成功
+    [加入#4] userId=19 http=200 code=0 memberCount=5 message=ok
+    [PASS] A4 第 4 个加入成功
+    [加入#5] userId=20 http=200 code=0 memberCount=6 message=ok
+    [PASS] A5 第 5 个加入成功
+    [加入#6] userId=21 http=200 code=0 memberCount=7 message=ok
+    [PASS] A6 第 6 个加入成功
+    [加入#7] userId=22 http=200 code=0 memberCount=8 message=ok
+    [PASS] A7 【边界】第 7 个加入者成功，人数正好到 8（满员且未溢出）
+    [加入#8 溢出] userId=23 http=400 code=1 message=小组已满（上限 8 人）
+    [PASS] A8 【上限】第 8 个加入者被拒（code=1）
+    [PASS] A9 【上限】拒绝话术逐字一致：「小组已满（上限 8 人）」
+    [队长视角] memberCount=8 members 条数=8 队长在列=true
+    [PASS] A10 队长视角复核：memberCount=8、members 8 行
+    [PASS] A11 溢出者本人未被写入任何组（其 /teams/mine 应为 null）
+    [溢出者视角] GET /teams/mine → code=0 data=null
+    [PASS] A12 溢出者的 /teams/mine 仍为 null（拒绝是原子的，没留半条记录）
+
+    === B. 对战过期（expires_at 读时计算，契约 §4.4） ===
+    [发起] code=L93H23 expiresAt=2026-12-01 23:59:59
+    [PASS] B0 发起对战成功
+    [过期前] status="open" items 条数=25
+    [PASS] B1 过期前 status=open 且 items 是数组
+    [改库] 影响行数=1 现值 expires_at=2020-01-01 00:00:00 status 列仍为 "open"（列本身没被 GET 改过）
+    [PASS] B2 临时库里 expires_at 已改到过去
+    [PASS] B3 库里 status 列仍是 open —— 证明 expired 是读时算的，不是写库
+    [过期后] status="expired" items=null
+    [PASS] B4 过期后 GET /duels/:code → status="expired"
+    [PASS] B5 过期后 items 为 null（非空数组）
+    [过期后提交] http=400 code=1 message=挑战已过期
+    [PASS] B6 过期后提交被拒：「挑战已过期」
+    [我的对战] 条数=1 本行={"code":"L93H23","lessonTitle":"自然五字","role":"challenger","status":"expired","myScore":null,"rivalName":null,"rivalScore":null,"createdAt":"2026-11-24 00:18:17"}
+    [PASS] B7 GET /duels/recent 里同一行也报 expired（两个端点同源）
+    [改库复核] status="open" challenger_score=null opponent_score=null
+    [PASS] B8 过期提交没有写库（分数仍为空）—— 拒绝是干净的
+
+    [汇总] 失败断言数 = 0
+    [清库] 删除账号 10 个；残留 edge* 用户=0；teams 清空（原 1 个）
+
+## 逐条判定
+
+### G6 · 8 人上限
+
+- **上限就是 8，且**边界**不越位**：队长 + 第 1..7 个加入者 = **8 人**，
+  第 7 个加入者拿到的 `memberCount` **正好是 8 并且成功** —— 这是本轮的**边界断言**（off-by-one）。
+  第 8 个加入者（第 9 个账号）→ **HTTP 400 / `code:1` / 「小组已满（上限 8 人）」**。
+- **拒绝是原子的、干净的**：被拒的那个账号 `GET /teams/mine` → **`data:null`**，
+  没被塞进 `team_members` 留半条。队长视角复核 `memberCount=8`、`members` 8 行、队长带 `isCaptain`。
+- **check 读的是源表 COUNT**（`db('team_members').where({team_id}).count()`），
+  不是 `teams` 表上的冗余列，所以不会出现"人数显示 8、实际 9"的漂移。
+
+### G5 · 过期语义
+
+- **有效期就是 7 天**：发起时回 `expiresAt="2026-12-01 23:59:59"`，
+  恰是发起日（2026-11-24）+ 7 天且落在当天最后一秒，与 `DUEL_EXPIRE_DAYS = 7` 对得上。
+- **`expired` 是读时算出来的**，这一点本轮**直接证到了**：把 `expires_at` 改到 2020 年之后，
+  库里 `status` **列本身仍是 `open`**（B3），但 `GET /duels/:code` 回 **`status:"expired"`**（B4）。
+  也就是说这里**没有定时任务、没有写回**，是 `effectiveStatus()` 在每次读时比一次 `now`。
+  这个设计是刻意的：GET 不该拿写锁。
+- **过期后 `items` 是 `null`**（B5），不是空数组 —— 与 §4.4「`status != 'open'` 时 `items` 为 `null`」一致。
+- **过期后提交被拒**：`POST /duels/:code/submit` → `code:1`「挑战已过期」（B6），
+  且**分数没写进去**（B8 复核 `opponent_score` 仍为 `null`）—— 拒绝得干净，不是"先写后回滚"。
+- **两个端点同源**：`GET /duels/recent` 里同一行也报 `expired`（B7），
+  说明列表页不会拿一个 `open` 的旧值骗用户。
+
+## 证明力边界（写清楚，别放大）
+
+- 过期是**直接改库**构造的，不是真等 7 天 —— 它验的是 **`effectiveStatus()` 对 `expires_at` 的反应**，
+  不是"系统到点会自动做什么"（本项目**没有**这种定时任务，也不需要）。
+- 8 人上限是**单进程、顺序加入**测的。并发同时加入最后一个空位会不会双双挤进去，
+  **本轮没测**（需要并发压测，属另一类验证）；就本项目的使用场景（分享邀请码给同学逐个点进来）
+  而言，顺序加入是主路径。
+- 全部结论来自**隔离实例 8099 + 临时库副本 + 桌面 HTTP 客户端**，不是打包产物、不是真机。
+
+## 清库与收尾
+
+- 脚本自带清库：删掉本轮造的 10 个账号及其 `duels / team_members / xp_events / checkins / user_streaks` 行，
+  末行印 `残留 edge* 用户=0`。
+- 收尾后复核临时库回到基线：
+  `users=[xiaoming(1), pfd5c0q(4)]`、`xp_events=171`、`duels=0 teams=0 team_members=0`。
+- 共享环境全程未动：`8091/api/health → 200`、`8091/api/stamps`（无 token）`→ 401`、`5173 → 200`。
+- 临时件已删：`data/tmp-edge.db`（含 `-wal`/`-shm`）、`.smoke-edge.ts`、`.check-edge.ts`；8099 进程已杀。
+  目录里剩下的 `data/_verify.db` **不是本路的**（另一个泳道的临时库），本路没动它。
+
+## 本文件没有覆盖的（仍然没验）
+
+- ~~**APK / H5 打包产物级验证**：按编排者要求**本轮不跑构建**（内存吃紧、构建串行排队）。
+  六单元都没有产物级验证，这一条在本轮**依然是空的**。~~
+  → **H5 那半条已在 `evidence/fe-game-artifact.txt` 补齐**（2026-11-24 上午）：编排者随后给了
+  「等构建排队，再跑产物级验证」，`npm run build:h5` 已跑（38 个 assets），并在**打包产物**上
+  复跑 §8 的三条验收，**42 条断言 0 失败**。**APK 那半条依然是空的**（本轮只走了 h5 目标，
+  没打 APK、没装真机）。
+- **真机 / WebView 行为**：`evidence/fe-game-render.txt` 的渲染结论全部来自桌面 chromium 1208，
+  与真机不是一回事。

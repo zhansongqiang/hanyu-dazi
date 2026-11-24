@@ -1,5 +1,6 @@
 {
   "_note": "首版课程内容。字段说明见同目录 README.md。数组顺序就是学习顺序（sort 由导入脚本按位置写入）。",
+  "_audio_note": "音频覆盖 basic 层 40 个知识点 —— 就是除「四声辨调」(basic-char-tone) 之外的 basic 课时；契约 §8 要求 kind='listen' 恰好 40 条，所以 kinds 里带 listen 的课时只能正好是这 40 个点所在的课时。「四声辨调」刻意**不带** listen：它练的是读音侧的四声分辨，出题只用文本，没有对应 mp3。advanced / extended 层同样不出听音题。要给别的知识点也配音频时，先生成 content/audio/<key>.mp3，再把 listen 加进对应课时的 kinds —— 但那样 §8 的 40 就会变，属于改契约，得先过 §7。",
   "units": [
     {
       "key": "basic-char",
@@ -50,6 +51,20 @@
             { "key": "xia", "text": "下", "pinyin": "xià", "gloss": "down, below", "hint": "跟「上」正好相反，东西在下面。" },
             { "key": "zhong", "text": "中", "pinyin": "zhōng", "gloss": "middle, center", "hint": "一根杆子正穿过方框的正中间。" }
           ]
+        },
+        {
+          "key": "basic-char-tone",
+          "title": "四声辨调",
+          "title_en": "Four Tones",
+          "intro": "同一个 ma，换个声调就是另一个字。这一课练的是看字选调、看调选字 —— 声调本身，不是听音。",
+          "est_minutes": 6,
+          "kinds": ["recognize", "pinyin", "meaning"],
+          "points": [
+            { "key": "ma-mother", "text": "妈", "pinyin": "mā", "gloss": "mother", "hint": "一声：又高又平，一路平着走，不断也不拐 ——「妈妈」。" },
+            { "key": "ma-hemp", "text": "麻", "pinyin": "má", "gloss": "hemp", "hint": "二声：往上扬，像没听清时问一声「啊？」—— 从低往高挑。" },
+            { "key": "ma-horse", "text": "马", "pinyin": "mǎ", "gloss": "horse", "hint": "三声：先压低、再拐着升上来，像点头 —— 中间要拐那个弯。" },
+            { "key": "ma-scold", "text": "骂", "pinyin": "mà", "gloss": "to scold", "hint": "四声：从最高处一下掉到底，最干脆 —— 往下砸。" }
+          ]
         }
       ]
     },
@@ -79,9 +94,9 @@
           "key": "basic-word-number",
           "title": "数字四字",
           "title_en": "Numbers",
-          "intro": "最小的四个数字，笔画也最好记。",
-          "est_minutes": 6,
-          "kinds": ["recognize", "pinyin", "meaning", "listen"],
+          "intro": "最小的四个数字，笔画也最好记 —— 正好拿来练描红。",
+          "est_minutes": 8,
+          "kinds": ["recognize", "pinyin", "meaning", "stroke", "listen"],
           "points": [
             { "key": "yi", "text": "一", "pinyin": "yī", "gloss": "one", "hint": "一横，就是一根手指。" },
             { "key": "er", "text": "二", "pinyin": "èr", "gloss": "two", "hint": "两横，两根手指。" },
@@ -167,6 +182,162 @@
             { "key": "zhe-shi-wo-de-shu", "text": "这是我的书", "pinyin": "zhè shì wǒ de shū", "gloss": "This is my book", "hint": "「的」表示所属，等于英语的 my。" },
             { "key": "wo-xiang-he-shui", "text": "我想喝水", "pinyin": "wǒ xiǎng hē shuǐ", "gloss": "I want to drink water", "hint": "「想」后面接想做的事。" },
             { "key": "mingtian-jian", "text": "明天见", "pinyin": "míngtiān jiàn", "gloss": "See you tomorrow", "hint": "下课跟同学说这句就够了。" }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "advanced-char-radical",
+      "level": "advanced",
+      "type": "char",
+      "title": "偏旁识义",
+      "title_en": "Radicals",
+      "intro": "认字先认偏旁：三点水、木字旁、提手旁 —— 看见偏旁就知道这字跟什么有关。",
+      "lessons": [
+        {
+          "key": "advanced-char-water",
+          "title": "三点水",
+          "title_en": "Water Radical",
+          "intro": "带三点水的字，多半跟水有关。",
+          "est_minutes": 8,
+          "kinds": ["recognize", "pinyin", "meaning", "stroke"],
+          "points": [
+            { "key": "he", "text": "河", "pinyin": "hé", "gloss": "river", "hint": "三点水加一个「可」，水流成的就是河。" },
+            { "key": "hai", "text": "海", "pinyin": "hǎi", "gloss": "sea", "hint": "三点水加「每」，水多得看不到边。" },
+            { "key": "xi", "text": "洗", "pinyin": "xǐ", "gloss": "wash", "hint": "三点水加「先」，用水先把东西弄干净。" },
+            { "key": "han", "text": "汉", "pinyin": "hàn", "gloss": "Chinese (Han)", "hint": "三点水加「又」—— 我们学的语言就叫汉语的「汉」。" }
+          ]
+        },
+        {
+          "key": "advanced-char-wood",
+          "title": "木字旁",
+          "title_en": "Wood Radical",
+          "intro": "带木字旁的字，多半跟树木有关。",
+          "est_minutes": 8,
+          "kinds": ["recognize", "pinyin", "meaning", "stroke"],
+          "points": [
+            { "key": "shu-tree", "text": "树", "pinyin": "shù", "gloss": "tree", "hint": "木字旁加「对」，长在地上的就是树。" },
+            { "key": "lin", "text": "林", "pinyin": "lín", "gloss": "woods", "hint": "两棵「木」并排站着，就是林子。" },
+            { "key": "zhuo", "text": "桌", "pinyin": "zhuō", "gloss": "table", "hint": "下面藏着一个「木」—— 古时候桌子是木头做的。" },
+            { "key": "xiao-school", "text": "校", "pinyin": "xiào", "gloss": "school", "hint": "木字旁加「交」，上课的地方就是学校。" }
+          ]
+        },
+        {
+          "key": "advanced-char-hand",
+          "title": "提手旁",
+          "title_en": "Hand Radical",
+          "intro": "带提手旁的字，都要动手。",
+          "est_minutes": 8,
+          "kinds": ["recognize", "pinyin", "meaning", "stroke"],
+          "points": [
+            { "key": "da-hit", "text": "打", "pinyin": "dǎ", "gloss": "hit, play", "hint": "提手旁加「丁」，用手打一下。" },
+            { "key": "zhao", "text": "找", "pinyin": "zhǎo", "gloss": "look for", "hint": "提手旁加「戈」，伸手去找东西。" },
+            { "key": "la", "text": "拉", "pinyin": "lā", "gloss": "pull", "hint": "提手旁加「立」，用力把它拉过来。" },
+            { "key": "na", "text": "拿", "pinyin": "ná", "gloss": "hold, take", "hint": "「合」下面加「手」，合起来用手拿。" }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "advanced-word-city",
+      "level": "advanced",
+      "type": "word",
+      "title": "上街办事",
+      "title_en": "Out and About",
+      "intro": "买东西、坐车、看天气 —— 出了校门马上就用到。",
+      "lessons": [
+        {
+          "key": "advanced-word-shop",
+          "title": "买东西",
+          "title_en": "Shopping",
+          "intro": "问价钱之前，先认识地方和价钱。",
+          "est_minutes": 8,
+          "kinds": ["recognize", "pinyin", "meaning"],
+          "points": [
+            { "key": "shangdian", "text": "商店", "pinyin": "shāngdiàn", "gloss": "shop", "hint": "「商」是买卖，「店」是铺子。" },
+            { "key": "chaoshi", "text": "超市", "pinyin": "chāoshì", "gloss": "supermarket", "hint": "「超」是超级，什么都能买到的那种店。" },
+            { "key": "pianyi", "text": "便宜", "pinyin": "piányi", "gloss": "cheap", "hint": "「便」在这里读 pián，不读 biàn。" },
+            { "key": "gui", "text": "贵", "pinyin": "guì", "gloss": "expensive", "hint": "价钱高。跟「便宜」是一对反义词。" }
+          ]
+        },
+        {
+          "key": "advanced-word-traffic",
+          "title": "出门坐车",
+          "title_en": "Getting Around",
+          "intro": "上学怎么走，四个词说清楚。",
+          "est_minutes": 8,
+          "kinds": ["recognize", "pinyin", "meaning"],
+          "points": [
+            { "key": "gongjiaoche", "text": "公交车", "pinyin": "gōngjiāochē", "gloss": "bus", "hint": "「公」是一起用的，谁都能上的车。" },
+            { "key": "ditie", "text": "地铁", "pinyin": "dìtiě", "gloss": "subway", "hint": "「地」是地下，「铁」是铁轨 —— 地下跑的铁车。" },
+            { "key": "chezhan", "text": "车站", "pinyin": "chēzhàn", "gloss": "station", "hint": "等车的地方，车会在这儿停一下。" },
+            { "key": "dache", "text": "打车", "pinyin": "dǎchē", "gloss": "take a taxi", "hint": "这里的「打」不是打人，是叫一辆车。" }
+          ]
+        },
+        {
+          "key": "advanced-word-weather",
+          "title": "天气",
+          "title_en": "Weather",
+          "intro": "出门前看一眼窗外。",
+          "est_minutes": 8,
+          "kinds": ["recognize", "pinyin", "meaning"],
+          "points": [
+            { "key": "qingtian", "text": "晴天", "pinyin": "qíngtiān", "gloss": "sunny day", "hint": "「晴」左边是日，有太阳的天。" },
+            { "key": "xiayu", "text": "下雨", "pinyin": "xiàyǔ", "gloss": "to rain", "hint": "「下」是从天上落下来，「雨」就是雨。" },
+            { "key": "guafeng", "text": "刮风", "pinyin": "guāfēng", "gloss": "windy", "hint": "「刮」是吹过，「风」就是风。" },
+            { "key": "wendu", "text": "温度", "pinyin": "wēndù", "gloss": "temperature", "hint": "「温」是暖，「度」是度数 —— 冷热多少度。" }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "extended-dialogue-daily",
+      "level": "extended",
+      "type": "dialogue",
+      "title": "开口办事",
+      "title_en": "Getting Things Done",
+      "intro": "整句上阵：点餐、问路、约时间，说完就能用。",
+      "lessons": [
+        {
+          "key": "extended-dialogue-canteen",
+          "title": "食堂点餐",
+          "title_en": "At the Canteen",
+          "intro": "打饭窗口前的一套话。",
+          "est_minutes": 12,
+          "kinds": ["recognize", "pinyin", "meaning"],
+          "points": [
+            { "key": "wo-yao-yifen-mifan", "text": "我要一份米饭", "pinyin": "wǒ yào yí fèn mǐfàn", "gloss": "I'd like a portion of rice", "hint": "「要」是想要，「一份」是量词，饭菜都按份数点。" },
+            { "key": "you-miantiao-ma", "text": "有面条吗", "pinyin": "yǒu miàntiáo ma", "gloss": "Do you have noodles?", "hint": "「有……吗」是问有没有，句尾的「吗」不能省。" },
+            { "key": "zhege-cai-la-bu-la", "text": "这个菜辣不辣", "pinyin": "zhège cài là bú là", "gloss": "Is this dish spicy?", "hint": "「辣不辣」是正反问：把动词肯定否定叠一遍就是问句。" },
+            { "key": "wo-bu-yao-xiangcai", "text": "我不要香菜", "pinyin": "wǒ bú yào xiāngcài", "gloss": "I don't want cilantro", "hint": "「不要」就是拒绝，直接说想吃什么、不想吃什么。" }
+          ]
+        },
+        {
+          "key": "extended-dialogue-direction",
+          "title": "问路",
+          "title_en": "Asking the Way",
+          "intro": "找不到地方时，这四句能带你到。",
+          "est_minutes": 12,
+          "kinds": ["recognize", "pinyin", "meaning"],
+          "points": [
+            { "key": "tushuguan-zai-nar", "text": "图书馆在哪儿", "pinyin": "túshūguǎn zài nǎr", "gloss": "Where is the library?", "hint": "「在哪儿」问地点，前面放要找的东西。" },
+            { "key": "yizhi-wang-qian-zou", "text": "一直往前走", "pinyin": "yìzhí wǎng qián zǒu", "gloss": "Go straight ahead", "hint": "「一直」是不拐弯，「往前走」是朝前走。" },
+            { "key": "zai-yinhang-duimian", "text": "在银行对面", "pinyin": "zài yínháng duìmiàn", "gloss": "It's opposite the bank", "hint": "「对面」是马路那头，指方位很好用。" },
+            { "key": "zoulu-shi-fenzhong", "text": "走路十分钟", "pinyin": "zǒulù shí fēnzhōng", "gloss": "Ten minutes on foot", "hint": "「走路」是步行，「十分钟」是多长时间。" }
+          ]
+        },
+        {
+          "key": "extended-dialogue-plan",
+          "title": "约时间",
+          "title_en": "Making Plans",
+          "intro": "跟同学约个时间地点。",
+          "est_minutes": 12,
+          "kinds": ["recognize", "pinyin", "meaning"],
+          "points": [
+            { "key": "ni-mingtian-you-kong-ma", "text": "你明天有空吗", "pinyin": "nǐ míngtiān yǒu kòng ma", "gloss": "Are you free tomorrow?", "hint": "「有空」是有时间，「空」在这里读 kòng。" },
+            { "key": "xiawu-san-dian-keyi-ma", "text": "下午三点可以吗", "pinyin": "xiàwǔ sān diǎn kěyǐ ma", "gloss": "Is three in the afternoon OK?", "hint": "说时间用「点」：三点就是 3:00。" },
+            { "key": "women-caochang-jian", "text": "我们操场见", "pinyin": "wǒmen cāochǎng jiàn", "gloss": "Let's meet at the sports field", "hint": "「见」放在地点后面，就是在那儿碰头。" },
+            { "key": "wo-keneng-wan-yidian", "text": "我可能晚一点", "pinyin": "wǒ kěnéng wǎn yìdiǎn", "gloss": "I might be a little late", "hint": "「可能」是说不定，「晚一点」是慢一点到。" }
           ]
         }
       ]

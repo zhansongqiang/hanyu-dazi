@@ -908,6 +908,27 @@ CREATE INDEX idx_recordings_user ON recordings(user_id, item_id);
     <li>传数据库前先停后端做 WAL checkpoint，否则传上去的是旧数据</li>
     <li>若这次带了录音：确认 <code>uploads/recordings/</code> 目录存在且可写，并看一眼 <code>df -h</code>（59G 的盘已用 25G）——录音是唯一会持续长胖的东西，别挤到学校那套的磁盘</li>
   </ul>
+
+  <h3>七、多智能体并行开发纪律</h3>
+  <p>开发不是一个人从头写到尾，而是四条泳道同时开工。这一节定的就是并行的规矩：谁写哪些文件、做到什么程度算「做完」、以及进度在哪儿看。</p>
+  <div class="tw">
+    <table>
+      <thead><tr><th>泳道</th><th>负责</th></tr></thead>
+      <tbody>
+        <tr><td><code>be-api</code></td><td>接口、服务、迁移</td></tr>
+        <tr><td><code>fe-learn</code></td><td>学习主链路：单元、课时、答题、错题本、进度</td></tr>
+        <tr><td><code>fe-game</code></td><td>游戏化：打卡、连击、榜单、印章、对战、组队</td></tr>
+        <tr><td><code>content</code></td><td>内容与题库：单元、课时、题目、成就定义</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="note">各路的写集<strong>不在这里抄</strong>，以 <code>CONTRACT.md</code> 第五节的写集表为准——抄一遍就是第二份真相，改了这边忘了那边，比没有更坏。每条泳道<strong>只写自己的文件</strong>，别人的文件一行都不碰。</p>
+  <p><strong>「做完」的定义不是「代码写完了」</strong>，而是<strong>用户能看见的那句话成立了</strong>：能学完一课、答错进错题本、打卡连击 +1、两台手机能完成一次 PK。进度按这种单元记，不按任务、文件或提交记——后者只有写代码的人看得懂，前者谁都能核对。</p>
+  <p><strong>状态只有五种，而且谁能写是定死的</strong>：未开始（orchestrator）、进行中（本路）、待验收（本路，<em>必须附证据</em>）、已验收（<em>只能由非作者写</em>）、阻塞（本路，必须写原因）。「已验收」不许自己写，这是这条纪律里唯一不能妥协的一条：验收断言必须由<strong>没写这段代码的一方</strong>亲手跑过。后端用 <code>curl</code> 断言 HTTP 码、<code>code</code> 与关键字段值；前端用浏览器<strong>硬断言</strong>，以 <code>getBoundingClientRect()</code> 与 <code>elementFromPoint()</code> 为准，不用那种会「自动滚动重试」的点击工具——按钮在屏幕外它照样报成功，等于假通过。</p>
+  <p><strong>一轮的节奏是四拍</strong>：并行功能波、冻结、非作者验收波、串行部署波。<strong>构建与部署永远串行，只由 orchestrator 执行</strong>：本机可用内存只剩 2 G 出头，线上那台还跑着学校在用的一整套系统，两边都经不起并发。</p>
+  <p class="note"><strong>每一波开场和收场各有一道检查。</strong>开场：<code>8091</code> 上<strong>恰好一个</strong>监听进程，十张活动表全为 0（<code>attempts</code>、<code>xp_events</code>、<code>checkins</code>、<code>lesson_progress</code>、<code>user_streaks</code>、<code>user_achievements</code>、<code>duels</code>、<code>reports</code>、<code>teams</code>、<code>team_members</code>）。收场：各泳道把自己造的冒烟数据<strong>按用户名前缀删净</strong>。四条泳道共用一个本地库，不清就是下一个人排查时的假数据——这一条是被坑过才写进来的。</p>
+  <p><strong>进度在活页上看，不在文档里翻。</strong>进度活页是一个网页，打开即最新。首屏三样：<strong>待裁决</strong>（需要人拍板的事，永远置顶）、<strong>三条红绿灯</strong>（活动表是否归零、每路待验收积压数、待裁决数）、<strong>泳道表</strong>（单元 · 角色 · 里程碑 · 计划 Day · 状态 · 验收标准 · 证据）。每路带「最后更新时间」，超时未更新显红——防的是页面看着权威、其实早就僵在那儿。</p>
+  <p class="note"><strong>真源的顺序</strong>：这一份 <code>plan.html</code> 写规则与验收口径（低频改动），<code>PLAN/</code> 下每路一个状态文件（高频改动），活页只是它们的视图。<strong>状态只写在 <code>PLAN/</code> 里，活页不存状态</strong>——网页没了可以重建，状态没了就真没了。泳道表里的「里程碑」一列填 §十一 的 <strong>M1–M5</strong>，「计划 Day」一列填 §十一 排期的天；两列对齐以后，「比计划快还是慢」就是一眼的事。</p>
 </section>
 
 <section id="d13">

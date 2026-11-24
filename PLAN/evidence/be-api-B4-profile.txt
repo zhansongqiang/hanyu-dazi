@@ -1,0 +1,63 @@
+# B4 验收断言 · 进度与统计（GET /profile/summary、GET /profile/calendar）
+
+生成时间(本地)   : 2026-11-23 22:46:55
+目标             : http://127.0.0.1:8099（本地开发后端，仅 loopback）
+数据库           : C:\Users\Admin\AppData\Local\Temp\hd-beapi-fixture-b9eEN9\fixture.db（夹具一次性库，与后端同一文件；脚本用只读连接）
+夹具目录         : C:\Users\Admin\AppData\Local\Temp\hd-beapi-fixture-b9eEN9
+测试账号         : id=1 username=beapi_probe nickname=beapi 断言探针
+鉴权             : 夹具模式：经 POST /auth/register 现建探针账号并取回 token（该端点无限流，回避 5/min 的 /auth/login）
+被断言的进程     : pid=25216，启动于 2026-11-23 22:46:54，监听 127.0.0.1:8099
+源码 mtime(UTC)  : 
+                   src/routes/content.ts = 2026-11-23 08:55:07
+                   src/routes/attempts.ts = 2026-11-23 08:58:58
+                   src/routes/wrongbook.ts = 2026-11-23 08:57:18
+                   src/routes/progress.ts = 2026-11-23 08:57:35
+                   src/routes/index.ts = 2026-11-23 08:49:23
+                   src/app.ts = 2026-11-23 08:49:25
+                   src/services/item.ts = 2026-11-23 08:56:57
+断言人           : be-api（本单元作者）。本文件是**自测取证**，不是验收结论 ——
+                   状态仍停在「待验收」，须由非作者复核后才可改「已验收」。
+脚本             : %TEMP%\hd-beapi-assert.cjs（临时脚本，不入仓库）
+
+【前置数据构造】
+summary 的数字全部拿库内实算交叉核对（xp_events / lesson_progress / attempts / achievements / checkins），不只看「有没有字段」。
+DB 起点计数：attempts=0 xp_events=0 lesson_progress=0 checkins=0
+
+== B4 · 进度与统计（M3 Day 3） ==
+  [PASS] GET /api/profile/summary → HTTP 200 且 code=0   → HTTP 200 code=0
+  GET /profile/summary 原文: {"user":{"id":1,"username":"beapi_probe","nickname":"beapi 断言探针","avatarUrl":null},"xp":{"total":55,"week":55,"today":55},"streak":{"current":1,"max":1,"lastCheckinDate":"2026-11-23"},"rank":{"rankName":"童生","level":1,"weekRank":1,"weekXp":55},"stamps":{"total":15,"earned":0},"learn":{"lessonsDone":1,"lessonsTotal":19,"itemsDone":5,"accuracy":0.29},"todayCheckedIn":true}
+  [PASS] summary 顶层（一次拿全）：字段集与契约逐字一致   → 期望 7 项 / 实得 7 项
+  [PASS] summary.user：字段集与契约逐字一致   → 期望 4 项 / 实得 4 项
+  [PASS] summary.xp：字段集与契约逐字一致   → 期望 3 项 / 实得 3 项
+  [PASS] summary.streak：字段集与契约逐字一致   → 期望 3 项 / 实得 3 项
+  [PASS] summary.rank：字段集与契约逐字一致   → 期望 4 项 / 实得 4 项
+  [PASS] summary.stamps：字段集与契约逐字一致   → 期望 2 项 / 实得 2 项
+  [PASS] summary.learn：字段集与契约逐字一致   → 期望 4 项 / 实得 4 项
+  [PASS] summary.user 与 users 表一致   → {"id":1,"username":"beapi_probe","nickname":"beapi 断言探针","avatarUrl":null}
+  [PASS] xp.total = SUM(xp_events.amount)（与流水表实算一致，不是缓存列）   → 55 vs 55
+  [PASS] rank.rankName 由累计 XP 按常量阈值推出（童生0/秀才500/举人1500/贡士3000/进士6000）   → 童生 @xp 55
+  [PASS] stamps.total = achievements 表总数   → 15 vs 15
+  [PASS] stamps.earned = 我已得印章数   → 0 vs 0
+  [PASS] learn.lessonsTotal = lessons 表总数   → 19 vs 19
+  [PASS] learn.lessonsDone = lesson_progress(status='done') 计数   → 1 vs 1
+  [PASS] learn.itemsDone = COUNT(DISTINCT item_id)（去重，不是作答次数）   → 5 vs 5
+  [PASS] learn.accuracy = 答对/总作答 保留 2 位   → 0.29 vs 0.29（2/7）
+  [PASS] todayCheckedIn:true（刚由 finish 触发打卡）   → true
+  [PASS] streak.current=1 且 lastCheckinDate=今天（本地日期）   → [1,"2026-11-23","2026-11-23"]
+  [PASS] streak.max ≥ streak.current   → [1,1]
+  [PASS] xp.week / xp.today 均为数字   → [55,55]
+  [PASS] xp.today 落在 (0, total] 区间（今天确有作答与结算）   → [55,55]
+  [PASS] GET /api/profile/calendar（不传参）→ HTTP 200 且 code=0   → HTTP 200 code=0
+  [PASS] calendar 的 data：字段集与契约逐字一致   → 期望 2 项 / 实得 2 项
+  [PASS] days / checked 都是数组   → [true,true]
+  [PASS] 缺省返回 30 天   → 30
+  [PASS] 【关键】末位就是今天   → 2026-11-23 vs 2026-11-23
+  [PASS] 30 天连续（相邻差值全为 1 天，跨月也正确）   → [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+  [PASS] days 升序   → 2026-10-25 … 2026-11-23
+  [PASS] checked ⊆ days（打卡日一定在窗口内）   → ["2026-11-23"]
+  [PASS] checked 含今天   → ["2026-11-23"]
+  [PASS] checked 与 checkins 表落在窗口内的日期一致   → [["2026-11-23"],["2026-11-23"]]
+  ?days=7 实测: {"len":7,"last":"2026-11-23"}
+  [PASS] days=7 → 恰好 7 天且末位今天   → 7
+  · ?days=abc 的实测行为：days 长度 = 30（仅记录观察，契约未规定非法值的兜底策略）
+  [PASS] 无 token 访问 /profile/summary → 401 且 code=1   → HTTP 401 code=1

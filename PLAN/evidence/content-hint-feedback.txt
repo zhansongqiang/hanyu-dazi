@@ -1,0 +1,98 @@
+# 证据 · C2 —— 答题反馈里到底有没有 hint（走真实 HTTP）
+
+单元：C2 hint 入库（泳道 content，里程碑 M2，计划 Day 2）
+验收标准（契约 §8 对 content 的口径）：`POST /attempts` 的反馈里**出现 hint**
+出证人：content（**作者自检**，不是验收 ——「已验收」仍只能由非作者写）
+时间：2026-11-24
+结论：**6/6 断言成立，退出码 0**；3 次变异分别转红/拒绝，退出码 2/2/1
+
+## 这条为什么必须「发一次真请求」才算数
+
+「导入时把 hint 写进库了」和「接口真的把它回出来了」是两件事，中间还隔着
+`services/attempt.ts` 的列探测（`hasHintColumn()`）、路由的返回体组装、以及
+「答对时还带不带 hint」这个契约明确写死的细节（§4.2 的示例就是 `isCorrect:true` 也带）。
+只查库证明不了后三件事 —— 所以 C2 的验收口径从一开始就是**接口行为**，不是库内容。
+
+## 命令 —— 一次性库上跑，全程不碰共用开发库
+
+    $ cd server
+    $ rm -f data/_verify.db*
+    $ DB_FILENAME=./data/_verify.db npx tsx src/migrate.ts
+    $ DB_FILENAME=./data/_verify.db npx tsx scripts/import-content.ts
+    $ DB_FILENAME=./data/_verify.db npx tsx scripts/check-hint-feedback.ts
+    EXIT=0
+
+输出（逐字）：
+
+    库文件：D:\coding\hanyu-dazi\server\data\_verify.db
+
+    临时服务：http://127.0.0.1:49891（本进程内，跑完即关）
+    探针题目：#1 [recognize] 知识点 ri 「日」→ rì
+    content.json 里的 hint：「太阳的样子，中间那一点是它的光。」
+    库里 items.hint ：「太阳的样子，中间那一点是它的光。」
+
+    注册 c2check769368：HTTP 200 code=0 已拿到 token
+
+    【答错】HTTP 200 code=0
+      {"isCorrect":false,"answer":"rì","xpEarned":2,"hint":"太阳的样子，中间那一点是它的光。","wrongTimes":1,"badge":null}
+
+    【答对】HTTP 200 code=0
+      {"isCorrect":true,"answer":"rì","xpEarned":10,"hint":"太阳的样子，中间那一点是它的光。","wrongTimes":1,"badge":null}
+
+    断言：
+      ✓ 答错时 后端复判 isCorrect === false
+      ✓ 答错时 hint 非空
+      ✓ 答对时 hint 非空（契约 §4.2 的示例就是答对也带）
+      ✓ 两次的 hint 都与 items.hint 逐字相同（不是拼接、不是截断）
+      ✓ 接口回的 hint 就是 content.json 那一句（唯一真相源，逐字相同）
+      ✓ 答错发的 XP 与答对不同（2 / 10，来自 constants）
+
+    C2 通过：0 条不成立
+
+## 变异测试 —— 证明这 6 条断言不是白写的
+
+| 变异 | 做法 | 期望 | 实得 |
+|---|---|---|---|
+| A 共用库守卫 | 不带 `DB_FILENAME` 直接跑（= 指到 `data/hanyu-dazi.db`） | 拒绝，退出码 2 | ✓ 打印拒绝理由 + 正确用法，**exit=2** |
+| B 迁移没跑 | 在一次性库副本上 `ALTER TABLE items DROP COLUMN hint` | 不能静默通过 | ✓ 报「items 表没有 hint 列 —— 迁移 20261123160001 没跑到」，**exit=2** |
+| C 库里写了别的话 | 把 `point_key='ri'` 的 hint 截断成「太阳的样子」（5 条题） | 第 5 条断言转红 | ✓ **1 条不成立，exit=1** |
+
+变异 C 的输出（关键三行）：
+
+    content.json 里的 hint：「太阳的样子，中间那一点是它的光。」
+    库里 items.hint ：「太阳的样子」
+    ✗ 接口回的 hint 就是 content.json 那一句（唯一真相源，逐字相同）
+    C2 未通过：1 条不成立          >>> exit=1
+
+变异 C 特意留着第 4 条断言（`=== items.hint`）**依然成立** —— 它只比「接口与库一致」，
+库被改坏它照样绿。真正拦住「导入了半句」的是第 5 条：拿 content.json 当唯一真相源比。
+两条断言各管一件事，所以两条都要有。
+
+## 工具
+
+`server/scripts/check-hint-feedback.ts`（本路新增，随证据一起入库）。
+设计上值得记四笔：
+
+1. **在进程内起真服务、端口交给系统挑**（`app.listen(0)`）—— 不跟别人的 dev server 抢端口，
+   也不用手工 `kill`；跑完 `closeAllConnections()` + `server.close()` + `db.destroy()` 收干净。
+2. **走 `POST /auth/register` 换 token，不用 `/auth/login`** —— login 有 5 次/分钟限流
+   （CLAUDE.md 记过这个坑），手测几次就把自己限死，后面全 500 还看不出原因。
+3. **写库守卫**：解析出的库文件若以 `hanyu-dazi.db` 结尾，除非显式给
+   `ALLOW_SHARED_WRITE=1`，否则拒绝运行。这个脚本会插用户、插答题记录、发 XP，
+   忘了 `DB_FILENAME` 就会脏共用开发库 —— 让工具替人记住，比写进文档管用。
+4. **不调 `process.exit()`**：Windows 上它在 socket 关闭途中调用会撞 libuv 的
+   `Assertion failed: !(handle->flags & UV_HANDLE_CLOSING)`，进程以 **127** 退出 ——
+   断言全过却给出非 0 退出码，等于把「退出码就是断言」这条纪律毁掉。
+   这里只设 `process.exitCode`，让事件循环自己排空。（这条是踩过一次才写下的，
+   当时的临时探针就是这样 5 条断言全过、退出码 127。）
+
+退出码约定：0 = 全部成立；1 = 有断言不成立；2 = 环境不对（没迁移 / 没导入 / 指到共用库）。
+
+## 边界（诚实说明，不夸大）
+
+- 探针只抽**第 1 条**带 hint 的题（`point_key='ri'`）。hint 的取值路径对 296 条题是同一条
+  （列探测 + `item.hint ?? null`），逐条验没有额外信息量；但「296 条**都**有 hint」
+  这件事是 C4 那侧读的库（`hint 非空 296/296`），本件不重复声称。
+- 本件是**作者自检**。C2 的状态仍是「待验收」，等非作者复核后填「已验收」。
+- 本路没有改任何非 content 写集的文件；`items.hint` 那一列由 content 的迁移
+  `20261123160001_items_hint.ts` 负责，be-api 侧只做了列探测容错。

@@ -1,0 +1,151 @@
+# 证据 · G5 PK 对战 + 分享链接 / G6 组队
+
+泳道：fe-game
+单元：G5（里程碑 M4，计划 Day 4）、G6（里程碑 M4，计划 Day 4）
+时间：2026-11-23 22:34（G5）、2026-11-23 22:31（G6）
+**取证方式：作者自测（fe-game 本人跑）—— 这不是「已验收」。**
+「已验收」按 `plan.html` §十二·七 只能由非作者写；本文件只是本路交出的可复核凭据。
+
+## 环境与方法（两个单元同一套）
+
+起**隔离实例 8099**，不碰共享的 8091 dev server（PID 32800 全程没动）：
+
+    cd server && PORT=8099 AUTO_MIGRATE=false HOST=127.0.0.1 npx tsx src/index.ts
+
+取证账号走 `POST /auth/register`（`/login` 有 loginLimiter 每分钟 5 次，不碰）。
+脚本是临时文件（`.smoke-duel.ts` / `.smoke-team.ts`），跑完即删；收尾用 knex 清掉临时账号的每一张关联表。
+**游客流程一律真的不带 `Authorization` 头**，不是"假装游客"。
+
+---
+
+## G5 —— `npx tsx .smoke-duel.ts`
+
+    [准备] 用课时 lessonId=1（该课时 items=25 条）
+    [准备] 发起人 id=8 name=取证丁
+    [1] POST /duels → http=200 code=0
+    [1] 返回键=["code","expiresAt","lessonId","lessonTitle","shareUrl"]
+    [1] data={"code":"92RVEL","lessonId":1,"lessonTitle":"自然五字","expiresAt":"2026-11-30 23:59:59","shareUrl":"/pages/duel/duel?code=92RVEL"}
+    [2] GET /duels/92RVEL（游客、无 Authorization）→ http=200 code=0
+    [2] 挑战键=["challengerId","challengerMs","challengerName","challengerScore","code","expiresAt","items","lessonId","lessonTitle","status"]
+    [2] status="open" lessonId=1 items 条数=25
+    [2] item 键=["answer","audioUrl","char","id","kind","lessonId","options","pointKey","prompt","promptEn","sort"]
+    [2] 首个 item={"id":1,"kind":"recognize","prompt":"日","promptEn":"Choose the correct pinyin.","options":["rì","yuè","huǒ","shuǐ"],"answer":"rì","char":null,"audioUrl":null,"sort":1,"lessonId":1,"pointKey":"ri"}
+    [2] stroke 题 5 条，其 options=[null,null,null,null,null]
+    [3] 游客 Guest01 提交 → code=0 data={"code":"92RVEL","role":"opponent","challenger":{"name":"取证丁","score":null,"ms":null},"opponent":{"name":"Guest01","score":7,"ms":42000},"winner":null}
+    [3] 另一个游客 Guest02 想顶替 → code=1 message="这一场已经有人答过了"
+    [3] 同名 Guest01 补交（换网重试）→ code=0 data={"code":"92RVEL","role":"opponent","challenger":{"name":"取证丁","score":null,"ms":null},"opponent":{"name":"Guest01","score":8,"ms":41000},"winner":null}
+    [4] 发起人提交 → code=0 data={"code":"92RVEL","role":"challenger","challenger":{"name":"取证丁","score":8,"ms":60000},"opponent":{"name":"Guest01","score":8,"ms":41000},"winner":"opponent"}
+    [5] 结束后 GET /duels/92RVEL → code=0 status="done" items=null
+    [6] 结束后再提交 → code=1 message="这场对战已经结束了"
+    [7] GET /duels/recent → code=0 条数=1
+    [7] 行键=["code","createdAt","lessonTitle","myScore","rivalName","rivalScore","role","status"]
+    [7] data=[{"code":"92RVEL","lessonTitle":"自然五字","role":"challenger","status":"done","myScore":8,"rivalName":"Guest01","rivalScore":8,"createdAt":"2026-11-23 22:34:02"}]
+    [8] GET /duels/ZZZZZZ → http=404 code=1 message="挑战不存在或已失效"
+    [8] 无 token 的 /duels/recent → http=401 code=1
+    [清库] duels=1 xp_events=0 users=1
+    [清库] 残留对战=0
+    Assertion failed: !(handle->flags & UV_HANDLE_CLOSING), file src\win\async.c, line 76
+
+> 末行那个 libuv 断言是 Windows 上 `db.destroy() + process.exit()` 的**退出期噪音**，
+> 出在脚本收尾、所有断言都已打印完、且 `残留对战=0` 之后；进程退出码因此非 0，
+> **不代表任何一步失败**。如实记在这里，不做美化。
+
+### 逐条对照 §8
+
+**「分享链接 `/pages/duel/duel?code=xxx` 未登录能打开（游客流程）」**
+- `GET /duels/:code` 不带任何 token → **HTTP 200 / `code:0`**，拿到挑战信息 + 25 道题。
+- `POST /duels/:code/submit` 不带 token 也能提交（Guest01 那次），并且**以游客身份写的是对手位**。
+- 反面对照：同一实例上 `/duels/recent` 不带 token → **401**（该接口是 A 类，没被顺手放开）。
+- 分享链接的形状就是契约写的那串：`shareUrl:"/pages/duel/duel?code=92RVEL"`。
+
+**「字段名与 §4 逐字一致」**
+- `POST /duels` 恰好 5 键；`GET /duels/:code` 恰好 10 键；`/duels/recent` 行恰好 8 键 —— 都与 §4.4 逐字相同。
+- **`items` 的每个元素恰好 11 键**：`answer, audioUrl, char, id, kind, lessonId, options, pointKey, prompt, promptEn, sort`，
+  与 §4.1 的 item 对象**逐字一致**，`lessonId:1` 与 `pointKey:"ri"` **确实在**。
+  这正是本轮修掉的那个缺口：原来的 `loadItems()` 是手搓的 9 字段映射，**漏了 `lessonId` 与 `pointKey`**；
+  现已改为复用 be-api 的 `services/item.ts` 的 `toItemDto()`（唯一映射），不再在 `routes/duel.ts` 里手写第二份。
+- `options` 的两种形态都对：选择题是**解析后的数组** `["rì","yuè","huǒ","shuǐ"]`；
+  stroke 题 5 条全是 **`null`**（§4.1 要求 null，不是 `[]`）。
+- `status != 'open'` 时 `items` 为 **`null``**（第 5 步实测 `status="done" items=null`）。
+
+### 契约没写、本路加固的两点（已写进 `PLAN/fe-game.md` 的 CHANGE-REQUEST）
+
+1. **`winner` 可以是 `null`**：一方还没答完时（第 3 步两次提交都是 `"winner":null`），
+   契约只列了 `challenger|opponent|tie`。前端 `api/duel.ts` 的类型已按 `… | null` 写，页面显示「等对手」。
+2. **对手位 first-write-wins**：第 3 步 Guest02 想顶掉 Guest01，被 `code:1「这一场已经有人答过了」` 拦住。
+   契约 §4.4 没这条规则，原实现是「后到的覆盖先到的」——分享链接要发到班级群，
+   谁最后点谁就是"对手"，胜负随时作废，所以堵上了。带**同名**的提交放行（认作本人换网重试）。
+
+---
+
+## G6 —— `npx tsx .smoke-team.ts`
+
+    [注册] A http=200 code=0 id=5 nick=取证甲
+    [注册] B http=200 code=0 id=6 nick=取证乙
+    [未组队] GET /teams/mine → http=200 code=0 data=null
+    [建组] POST /teams → http=200 code=0 teamId=1 邀请码=ATPAYC
+    [建组] 返回键=["captainId","id","inviteCode","memberCount","members","name","slogan"]
+    [建组] name="取证小组〈A〉" slogan="每天十道题" memberCount=1
+    [建组] members=[{"userId":5,"nickname":"取证甲","weekXp":0,"isCaptain":true,"isMe":true}]
+    [一人一组] A 再建 → http=400 code=1 message="你已经在一个小组里了，先退出再加入"
+    [入队] B 用小写码加入 → http=200 code=0 memberCount=2
+    [入队] members=[{"userId":5,"nickname":"取证甲","weekXp":0,"isCaptain":true,"isMe":false},{"userId":6,"nickname":"取证乙","weekXp":0,"isCaptain":false,"isMe":true}]
+    [A视角] GET /teams/mine → code=0 memberCount=2
+    [A视角] members=[{"userId":5,"nickname":"取证甲","weekXp":0,"isCaptain":true,"isMe":true},{"userId":6,"nickname":"取证乙","weekXp":0,"isCaptain":false,"isMe":false}]
+    [一人一组] B 再建 → code=1 message="你已经在一个小组里了，先退出再加入"
+    [重复入队] A 加入自己的组 → code=1 message="你已经在这个小组里了"
+    [坏邀请码] → code=1 message="邀请码无效"
+    [队员退出] B → code=0 data={"left":true,"disbanded":false}
+    [队员退出后] A 的组 → memberCount=1 members=[{"userId":5,"nickname":"取证甲","weekXp":0,"isCaptain":true,"isMe":true}]
+    [队长退出] A → code=0 data={"left":true,"disbanded":true}
+    [解散后] GET /teams/mine → code=0 data=null
+    [无token] GET /teams/mine → http=401 code=1
+    [清库] team_members=0+0 teams=0 xp_events=0 users=2
+    [清库] 残留用户=0 teams总数=0
+
+### 逐条对照 §8「建队 / 入队能走通」
+
+- **建队**：`POST /teams` 一次成功，返回体自带我自己的成员行（`isCaptain:true, isMe:true`）。
+- **入队**：`POST /teams/join` 用邀请码加入成功；**码统一大写比对**（这一轮特意传了**小写** `atpayc`，仍然成功）。
+- **`isMe` 是「看的人」而不是写死**：同一份 `members`，A 视角里 `isMe` 在 5 号身上、B 视角里在 6 号身上 ——
+  实测两次，证明它是按请求者算的（组队榜上"我"那行不会标错人）。
+- **未组队返回 `null`**（不是 404、不是 `{}`）：建组前与解散后各测一次，都是 `data:null`。
+  页面判「有没有组」因此只能写 `if (!mine)`。
+- **一人一组**：已在组里再建、再入别组、重复入本组，三条都被 `code:1` 拦住并给了具体 message。
+  前端 `team.vue` 的 `doCreate/doJoin` 在 catch 里**重新拉一次 `mine`** 回到服务端真实状态，不做乐观本地改。
+- **队长退出 = 解散**：队员 B 退出只删自己那条（`disbanded:false`，A 的组还在、人数 2→1）；
+  队长 A 退出 `disbanded:true`，随后两人都是 `data:null`。
+- **游客不能裸看**：`/teams/mine` 无 token → 401。
+
+### 契约没写、本路加固的一点（已写进 CHANGE-REQUEST）
+
+- `GET /teams/mine`（以及建组/入队的响应）多返一个 **`slogan`**：
+  §4.8 的示例 payload 没列它，但 §3 的 `teams` 表确实有这一列。
+  不回传的话，用户建组时填的「每天十道题」在库里就是**只写不读**的死字段，此后任何一页都看不到。
+  实测 `slogan:"每天十道题"` 确实回了；`team.vue` 里 `v-if="mine.slogan"` 才显示这一行，没填就整行不出现。
+
+## 仍未验的部分（本轮补掉两条；第三条**已由 `evidence/fe-game-artifact.txt` 补掉**）
+
+- ~~**8 人上限**~~：**已在 `evidence/fe-game-edge.txt` 补齐**（2026-11-24 00:18，隔离实例 8099 + 临时库副本）。
+  实测：队长 + 7 个加入者 = 8 人，**第 7 个加入者成功且 `memberCount` 正好到 8**（边界 off-by-one），
+  第 8 个加入者 → `HTTP 400 / code:1 /「小组已满（上限 8 人）」`，且被拒者 `GET /teams/mine` 仍是 `null`（原子拒绝）。
+  以下原记录保留作历史 —— `TEAM_MAX_MEMBERS=8` 的满员拒绝当时没实测（要造 8 个账号），只读了代码。
+- ~~**G5/G6 前端**~~：**已在 `evidence/fe-game-render.txt` 补齐**（2026-11-23 当晚）。
+  `duel.vue` 的游客渲染：**干净上下文（无任何 storage）**打开 `?code=A59X6R`，未被踢去 login、
+  整页只有一个 `GET /duels/A59X6R` 且 `auth=null`、页面给出「不登录也能答」的入口；
+  `team.vue` 的组队榜：A 视角「我」在首行带 `["队长","我"]`、B 视角「我」翻到第二行而 A 行仍带「队长」，
+  底部按钮分「解散小组（队长退出）」/「退出小组」。该轮 40 条断言 0 失败。
+  以下原记录保留作历史 —— `duel.vue` / `team.vue` 的浏览器侧渲染（分享链接在未登录游客眼里的样子、
+  组队榜"我"那行的高亮）当时没有做硬断言 —— 那轮验的是接口侧。
+- ~~**过期**~~：**已在 `evidence/fe-game-edge.txt` 补齐**（2026-11-24 00:18）。
+  把 `expires_at` 改到 2020 年后：库里 `status` 列**仍是 `open`**（证明没写回），
+  但 `GET /duels/:code` 回 `status:"expired"`、`items:null`；提交 → `code:1`「挑战已过期」**且分数没写库**；
+  `GET /duels/recent` 同一行也报 `expired`。发起时 `expiresAt` 恰为发起日 + 7 天（`DUEL_EXPIRE_DAYS=7`）。
+  以下原记录保留作历史 —— `expires_at` 过期后转 `expired` 是"读的时候算"的，当时没造过期数据验。
+- ~~**APK/H5 打包**：按编排者要求**本轮不跑构建**（内存吃紧，构建串行排队），所以没有产物级验证。~~
+  → **已在 `evidence/fe-game-artifact.txt` 补齐**（2026-11-24 上午）：编排者随后给了
+  「等构建排队，再跑产物级验证」，`npm run build:h5` 已跑（`index.html` md5
+  `9aed44f8062359e911b6e11aca988dcc`，38 个 assets，本路 6 个页面 chunk 各恰好 1 个），
+  并在**打包产物**（`vite preview` 4173 → 隔离后端 8099 + 临时库副本）上复跑了
+  §8 的三条验收：**42 条断言 0 失败**。
+  注意它补的是 **H5 产物**；**APK 仍然没打**，真机/WebView 也仍然没验（见该文件文末）。

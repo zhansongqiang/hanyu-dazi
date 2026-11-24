@@ -15,6 +15,42 @@
     {
       "path": "pages/login/login",
       "style": { "navigationBarTitleText": "登录" }
+    },
+    {
+      "path": "pages/lesson/lesson",
+      "style": { "navigationBarTitleText": "课时" }
+    },
+    {
+      "path": "pages/practice/practice",
+      "style": { "navigationBarTitleText": "答题" }
+    },
+    {
+      "path": "pages/stroke/stroke",
+      "style": { "navigationBarTitleText": "笔画描红" }
+    },
+    {
+      "path": "pages/rank/rank",
+      "style": { "navigationBarTitleText": "排行榜" }
+    },
+    {
+      "path": "pages/stamp/stamp",
+      "style": { "navigationBarTitleText": "印章" }
+    },
+    {
+      "path": "pages/team/team",
+      "style": { "navigationBarTitleText": "学习小组" }
+    },
+    {
+      "path": "pages/user/user",
+      "style": { "navigationBarTitleText": "用户资料" }
+    },
+    {
+      "path": "pages/duel/duel",
+      "style": { "navigationBarTitleText": "对战" }
+    },
+    {
+      "path": "pages/duel/result",
+      "style": { "navigationBarTitleText": "对战结果" }
     }
   ],
   "globalStyle": {

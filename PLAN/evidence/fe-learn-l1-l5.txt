@@ -1,0 +1,879 @@
+# 证据 · fe-learn L1–L5（作者自证，供非作者复核）
+
+泳道：fe-learn　　里程碑：M2（L1–L5 同批）
+取证：fe-learn（**作者自证**）　时间：2026-11-23
+结论：**L1 / L2 / L3 / L4 / L5 全部通过**（L4 的缺陷 D1 已于第六轮修复并复验，见第六轮）
+
+六轮取证：① HTTP 层（L1–L5 数据与契约）　② 静态层（单根元素、零 CDN 链路）
+③ 静态层（字段对齐）　④ **浏览器硬断言**（L1 / L2 / L4 / L5，Playwright + 真实坐标点击）
+⑤ **浏览器硬断言**（L3 错题本页与重练，同上工具；**含真实写入**）。
+⑥ **浏览器硬断言**（D1 修复的**变异测试**：修前必须转红、修后必须转绿；**含真实写入**）。
+②③ **不跑构建、不装依赖、零写入**；④ 分两组，**L2 组零写入（写入端点被 `route.abort()` 拦掉）**，
+L1/L4/L5 组**有真实写入**；⑤⑥ **均有真实写入**（见文末「冒烟数据」）。
+
+> ⚠️ **这份证据不构成「已验收」。** 按 `plan.html` §十二·七，「已验收」只能由**非作者**写。
+> 本文件是作者按「待验收必须附证据」交出的原始输出，供 orchestrator 复核。
+> **复核时请注意 §「仍未验的部分」** —— 那里列的是本证据**没有覆盖**的层（浏览器硬断言）。
+
+## 取证方式
+
+只走 HTTP，**未接触 `server/data/*.db`**。取证账号用 `POST /api/auth/register` 建（该接口
+**不挂 `loginLimiter`**，见 `routes/auth.ts:38` vs `:72`），因此全程**零次 login 调用**，
+不会消耗登录限流（一分钟 5 次）—— 这是本路验收能做到可重复重跑的前提。
+
+脚本：一次跑完 L1–L5，输出即下方「原始输出」全文。
+
+---
+
+## 原始输出（逐字，未删改）
+
+```
+# 取证原始输出 · fe-learn L1–L5
+时间：2026-11-23T14:30:47.834Z
+目标：http://127.0.0.1:8091
+
+## 0 探活
+  GET /health -> HTTP 200 {"code":0,"message":"ok","data":{"status":"up","ts":"2026-11-23T14:30:47.841Z"}}
+
+## 0b 取证账号
+  POST /api/auth/register {username:"pfd5c0q"} -> HTTP 200 code=0
+  拿到 token（前 20 字符）：eyJhbGciOiJIUzI1NiIs…  userId=4
+
+=== L1 单元 → 课时 浏览 ===
+  GET /api/units -> HTTP 200 code=0
+  单元数 = 6（应为数组，不是分页对象）
+  unit[0]: 12 字段
+    缺: (无)
+    多: (无)
+    · [1] 象形入门  lessonCount=3 doneCount=0 itemCount=60 progress=0
+    · [2] 日常词汇  lessonCount=4 doneCount=0 itemCount=68 progress=0
+    · [3] 开口说话  lessonCount=3 doneCount=0 itemCount=48 progress=0
+    · [4] 偏旁识义  lessonCount=3 doneCount=0 itemCount=48 progress=0
+    · [5] 上街办事  lessonCount=3 doneCount=0 itemCount=36 progress=0
+    · [6] 开口办事  lessonCount=3 doneCount=0 itemCount=36 progress=0
+  GET /api/units/1/lessons -> HTTP 200 code=0
+  课时数 = 3
+  lesson[0]: 11 字段
+    缺: (无)
+    多: (无)
+    · [1] 自然五字  itemCount=25 status=none
+    · [2] 人的样子  itemCount=20 status=none
+    · [3] 方位三字  itemCount=15 status=none
+  全库课时数 = 19
+  L1 结论：**通过**
+
+=== L2 答题页四（五）题型 ===
+  GET /api/lessons/1 -> HTTP 200 code=0
+  该课 items = 25
+  item[0]: 11 字段
+    缺: (无)
+    多: (无)
+  kind 分布：{"recognize":5,"pinyin":5,"meaning":5,"stroke":5,"listen":5}
+  stroke 题 options 全为 null：是 ✅（5 题）
+  全库 kind 分布：{"recognize":76,"pinyin":76,"meaning":76,"stroke":28,"listen":40}
+  五种题型齐备：齐备 ✅
+  --- 逐题型作答（传正确答案）---
+    · recognize item#1 答"rì" -> isCorrect=true xpEarned=10 hint="太阳的样子，中间那一点是它的光。"
+    · pinyin item#2 答"日" -> isCorrect=true xpEarned=10 hint="太阳的样子，中间那一点是它的光。"
+    · meaning item#3 答"sun" -> isCorrect=true xpEarned=10 hint="太阳的样子，中间那一点是它的光。"
+    · stroke item#4 答"日" -> isCorrect=true xpEarned=10 hint="太阳的样子，中间那一点是它的光。"
+    · listen item#137 答"日" -> isCorrect=true xpEarned=10 hint="太阳的样子，中间那一点是它的光。"
+  --- 故意答错（证服务端复判）---
+    item#1 答"rìZZZ" -> isCorrect=false answer="rì" wrongTimes=1
+    服务端判错：是 ✅
+  L2 结论：**通过**
+
+=== L3 错题本与重练 ===
+  GET /api/wrongbook -> HTTP 200 code=0
+  total=1  byLesson=[{"lessonId":1,"lessonTitle":"自然五字","count":1}]
+  三段齐备（total/list/byLesson）：是 ✅
+  刚答错的 item#1 出现在列表：是 ✅
+    该条：correctSince=0 wrongTimes=1 prompt="日" hint="太阳的样子，中间那一点是它的光。"
+  --- 重练：连对两次（§4.3 correct_since 达 2 移出）---
+    第 1 次练对 -> HTTP 200 cleared=0 remaining=1
+    第 2 次练对 -> HTTP 200 cleared=1 remaining=0
+    再查列表 total=0，item#1 仍在：否 ✅（已移出）
+  L3 结论：**通过**
+
+=== L4 进度（结算后单元进度应变化）===
+  结算前 unit#1: doneCount=0 progress=0 lessonCount=3
+  POST /api/lessons/1/finish {correctCount:25,total:25} -> HTTP 200
+    返回：status=done bestScore=25/25 firstDone=true xpEarned=20
+    checkin={"created":true,"currentStreak":1,"xpEarned":5} nextLessonId=2 unitDone=false
+  结算后 unit#1: doneCount=1 progress=0.33
+  结算后 lesson#1: status=done bestScore=25/25
+  L4 结论：**通过**
+
+=== L5 描红：本地字形 vs 库内 stroke 题字符集 ===
+  库内 stroke 题不同字符数 = 28
+  字符集：一 三 上 下 中 二 人 十 口 大 小 山 打 找 拉 拿 日 月 林 树 校 桌 水 汉 河 洗 海 火
+  chars.json 字数 = 28
+  字符集：一 三 上 下 中 二 人 十 口 大 小 山 打 找 拉 拿 日 月 林 树 校 桌 水 汉 河 洗 海 火
+  库有本地无（会降级）：(无) ✅
+  本地有库无（冗余）：(无) ✅
+  结构自检（strokes 与 medians 等长且非空）：全部合法 ✅
+  L5（字表）结论：**通过**
+```
+
+---
+
+## 判定（逐条对验收标准）
+
+| 单元 | 验收标准里可被本证据覆盖的部分 | 判定 |
+|---|---|---|
+| L1 | `learn → lesson` 的**数据链路**：`/units` 返数组、`/units/:id/lessons` 带进度；unit 12 字段 / lesson 11 字段 / item 11 字段**零缺零多** | 通过（数据层）|
+| L2 | 五种题型**全库齐备**（296 题）；逐题型各答一题**全部 `isCorrect:true`**；`stroke` 题 `options` 恒为 `null`（契约明文，不是 `[]`）| 通过（数据层）|
+| L3 | 故意答错 → 入 `wrongbook`（`total/list/byLesson` 三段齐）→ 连对两次 → `cleared 0→1`、`remaining 1→0`、**自动移出** | 通过 |
+| L4 | `finish` 后 `lesson.status: none→done`、`unit.doneCount 0→1`、`progress 0→0.33`；`checkin` / `nextLessonId` / `xpEarned` 均按契约返回 | 通过（数据层）|
+| L5 | `chars.json` **28 字 = 库内 `kind='stroke'` 全部字符**，零缺零余；每字 `strokes` 与 `medians` 等长非空 | 通过（字表与结构）|
+
+**附带证到（不在本五条内，但对别处有参考价值）**：
+- 服务端复判生效：传 `"rìZZZ"` 得 `isCorrect:false`，且回传 `answer:"rì"` —— §4.2 铁律 1 在运行期成立。
+- `hint` 列已由 content 的迁移落地并有值（`"太阳的样子，中间那一点是它的光。"`），
+  `services/item.ts:hasHintColumn()` 的容错分支当前走的是「列存在」那一支。
+
+---
+
+## 第二轮：静态自查（不跑构建、不装依赖）
+
+第一轮全是 HTTP 层。**「仍未验」清单里有两项其实不需要浏览器**，第二遍用仓库内已有的
+`mobile/node_modules/@vue/compiler-sfc`（**未新增任何依赖**）把这两项就地验掉。
+
+### ① 五个页面 `<template>` 的根节点数（对应「仍未验」第 5 项）
+
+本项目 `Layout` 用 `<Transition mode="out-in">`，**多根节点 = 切换后空白且不报错** ——
+这是本项目头号隐患，且编译期只给警告。用 SFC 编译器解析（不靠数缩进）：
+
+```
+  · learn:     根元素 1 个 [view]  ✅
+  · lesson:    根元素 1 个 [view]  ✅
+  · practice:  根元素 1 个 [view]  ✅
+  · wrongbook: 根元素 1 个 [view]  ✅
+  · stroke:    根元素 1 个 [view]  ✅
+① 结论：五页全部单根 ✅
+```
+
+### ②「不走 CDN」的静态链路（对应「仍未验」第 4 项的**一半**）
+
+```
+  A. 全仓 new Ctor(/new HanziWriter( 的构造处数 = 1
+     · mobile/src/pages/stroke/hanzi.ts:199  writer = new Ctor(dom, {
+     ✅ 唯一一处，且在 hanzi.ts（不是散落各处）
+
+  B. charDataLoader 出现处：
+     · hanzi.ts:12   文档注释（说明为什么接管）
+     · hanzi.ts:213  实参 —— 无条件传入，与本处构造同一对象字面量
+     · vendor/hanzi-writer.min.js:5  库自带的默认实现（未使用）
+
+  C. vendor/hanzi-writer.min.js 里 cdn.jsdelivr.net 仅出现 1 次（偏移 26827），上下文：
+     const mt={charDataLoader:(t,e,r)=>{const i=new XMLHttpRequest;
+     i.open("GET", `https://cdn.jsdelivr.net/npm/hanzi-writer-data@2.0/${t}.json`, !0)…
+     → 这正是**库的默认字形加载器**。我方构造时恒传入自己的 charDataLoader，
+       该默认对象不被使用 ⇒ 这条 CDN 地址是**运行期死代码**。
+
+  D. hanzi.ts 读全局的真实写法（第 1 遍正则漏了别名，是假阴性）：
+     · :74  if (w.HanziWriter) return resolve(w.HanziWriter as HanziWriterCtor)
+     · :80  s.onload = () => resolve(((window as any).HanziWriter as HanziWriterCtor) || null)
+```
+
+其余 5 处外网字符串**均非运行期引用**：`vendor/*.package.json` 的 `author`/`testURL`（元数据）、
+`hanzi-writer.min.js` 头部的许可注释、以及 `http://www.w3.org`（SVG 命名空间，不是网络请求）。
+
+**本项静态部分结论：通过** —— 「产物内不发 CDN 请求」这件事的**代码链路**已闭合。
+**但「浏览器里真的没发请求」仍需 DevTools Network 过滤 `jsdelivr` 佐证**（见下方第 4 项）。
+
+## 第三轮：字段对齐核对（本路五页，静态，**零写入**）
+
+第一轮全是 HTTP 层，第二轮是「单根 + 零 CDN」。这一轮补本项目最高频的一类 Bug：
+**页面读的字段名 ≠ 接口真发的字段名** —— 症状是列空白 / 卡片显示 0，且**不报错**。
+方法：从 `api/*.ts` 的 interface 取「契约 key 集合」，再从五页源码里抽出**每一个**
+「响应对象 / 数组元素」的字段读取，逐个求差集。
+**全程只读文件：未起服务、未调接口、未新增冒烟数据**（本轮 0 次写入，冒烟账不增）。
+
+### ① 违禁写法：响应对象上再取 `.data`（多剥一层）
+
+```
+  命中 0 处 ✅ —— 全五页唯一一处出现是 learn.vue:59 的注释，
+  正文写着「res 就是契约里的 data（数组本身），不是 res.data」
+```
+
+### ② 页面顶层响应字段（`const X = await XxxApi.*`）
+
+```
+  learn.vue      res    = units()          → 顶层直接用数组（元素字段见 ③）
+  lesson.vue     res    = lessons(id)      → 同上
+  practice.vue   d      = lesson(id)       → title  unit  items
+                 page   = wrongApi.list()  → byLesson  list
+                 r      = attempt.submit() → badge
+                 finish = attempt.finish() → bestScore bestTotal checkin firstDone
+                                             nextLessonId status unitDone xpEarned
+                 r      = wrong.practice() → cleared  remaining
+  wrongbook.vue  meta   = wrongApi.list()  → byLesson  list  total
+                 p      = wrongApi.list({lessonId}) → list
+  stroke.vue     d      = lesson(id)       → title  unit?.title  items
+```
+
+逐项对 `course.ts` / `attempt.ts` / `wrong.ts` 的 interface：**全部命中，无一落空**。
+
+### ③ 数组元素 / 嵌套对象字段（模板里的 `v-for` 别名）
+
+```
+  learn.vue      u in units        → doneCount id intro itemCount lessonCount
+                                     level progress title titleEn type   （CourseUnit 12 键用到 10）
+  lesson.vue     l in lessons      → bestScore bestTotal estMinutes id intro
+                                     itemCount status title titleEn      （LessonBrief 11 键用到 9）
+  wrongbook.vue  it in list        → answer audioUrl char correctSince hint itemId
+                                     kind lessonTitle prompt promptEn wrongTimes
+                                                                         （WrongItem 20 键用到 11）
+                 g in allByLesson  → count lessonId lessonTitle          （WrongByLesson 3 键全中）
+  practice.vue   b in badges       → code name                           （AttemptBadge 2 键全中）
+  stroke.vue     r in results      → char confirm ok
+```
+
+**无一个字段名落在契约 key 集合之外。**（未用到的键是「契约有、页面暂时不显示」，不是缺陷。）
+
+### ④ 四个「疑似不属契约」的字段 —— 逐个查明，**全是本遍正则的假阳性**
+
+```
+  learn.vue      k in kinds       → kinds 是本页 :17 的**本地静态数组**
+                                    [{key,char,name,desc} × 5]，渲染「五种练法」展示卡，
+                                    不是接口数据 —— 不属契约字段之列，合法
+  practice.vue   b in badges      → badges 是 AttemptBadge[]（来自 r.badge），
+                                    code/name 正是 AttemptBadge 的键，合法
+  practice.vue   opt.is-right     → 命中的是 **CSS 选择器**
+                                    `.opt.is-right / .is-wrong / .is-dim`，
+                                    正则把类名当成了属性访问，不是字段读取
+  stroke.vue     r.confirm        → :377 的 r 是 **uni.showModal 的回调参数**，
+                                    与外层 v-for="(r,i) in results" 同名遮蔽，
+                                    不是响应对象
+```
+
+### ⑤ 一处**刻意的不对称**（复核时最容易被误判成 Bug 的地方）
+
+`practice.vue:454-456` 有作者留的注释，与代码一致：
+
+```
+  ⚠️ GET /lessons/:id 的 item DTO **不含 hint**（toItemDto 里没有这个字段），
+     hint 只能从 POST /attempts 的响应里拿。所以这里恒为 null 是正常的，不是漏了。
+```
+
+**这是刻意设计，不是缺陷**，三条来源都能对上：
+
+- 本证据 L1 段 `item[0]` 的「多: (无)」—— items 的 11 键里确实没有 `hint`；
+- 本证据 L2 段 `POST /attempts` 的响应**带** `hint`（逐字可见 `"太阳的样子，中间那一点是它的光。"`）；
+- 错题模式走 `GET /wrongbook`，其 `WrongItem` **有** `hint` 键，所以错题模式答错能立刻看到提示语。
+
+> 复核人若只看「课时模式的 hint 恒为 null」会误报 —— 请连同上面三条来源一起看。
+
+**第三轮结论：五页字段对齐**通过 ✅ —— 无多剥一层的 `.data`、无落空的字段名、无本路引入的命名不一致。
+
+### 附：磁盘上那份 `mobile/dist/` 是**旧构建**，不能当证据用
+
+（顺手查证到的，**必须写清**，免得后人拿它当「零 CDN」或前端验收的凭据。）
+
+```
+  mobile/dist/build/h5/index.html     构建于   2026-11-23 15:36
+  mobile/src/pages.json               改于     2026-11-23 16:39
+  五个页面 .vue                       改于     16:56 ~ 22:26
+  → 产物里只有 4 个页面 chunk：learn / login / profile / wrongbook
+    **lesson / practice / stroke 三个 chunk 根本不存在**
+    （当时 pages.json 里也还没注册这三页，所以是「旧」而不是「构建配置坏了」）
+```
+
+因此：
+
+- 这份 dist **不能**用于验收 L2 / L5 —— 页面压根不在产物里；
+- 在它上面 grep `HanziWriter` / `jsdelivr` 得 **0 命中是「空验」**（代码就没进 bundle），
+  **不构成**「零 CDN」的证据。「零 CDN」的静态证据来自第二轮 ②，浏览器层仍需 DevTools Network；
+- 四套 dist 须由**编排者**重打（串行，且本机内存常驻高位），这一份只能作废。
+
+## 仍未验的部分（**交给非作者复核时优先补这些**）
+
+> ⚠️ **2026-11-23 晚追记：下列 1–5 已由「第四轮：浏览器硬断言」补上（见文末）。**
+> 原文保留，作为「本证据前三轮覆盖不到哪些层」的记录。第四轮的结论是 **L1 / L2 / L5 通过、
+> L4 查出 1 处真实缺陷**；第四轮遗留的 **L3 浏览器侧缺口已由第五轮补齐**（见文末第五轮）。
+
+按 `plan.html` §十二·七，前端要以**浏览器硬断言**为准（`getBoundingClientRect()` 与
+`elementFromPoint()`），**不用会自动滚动重试的点击工具**。本证据全部是 HTTP 层，**没有覆盖**：
+
+1. **L1 的「能点进去」**：`learn` 页点单元卡 → 跳 `lesson` 页的路由与渲染。本证据只证了
+   `/units/:id/lessons` **返回得对**，没证**点得动**。
+2. **L2 的「即时反馈」**：四题型在页面上的作答交互与对错着色。本证据只证了 `POST /attempts`
+   **判得对**，没证**画得对**。
+3. **L4 的「进度条随答题动起来」**：进度环/进度条的 DOM 读数。本证据只证了
+   `unit.progress 0→0.33` **变得对**，没证**条子跟着动**。
+4. **L5 的「能描」**：`hanzi-writer` 在浏览器里真的画出笔顺。**静态链路已在第二轮坐实**
+   （唯一构造点 + 无条件接管 `charDataLoader` + CDN 地址只在未被使用的默认加载器里），
+   但**仍需 DevTools Network 过滤 `jsdelivr` 佐证「零请求」**，并肉眼确认笔顺动画真的动。
+5. ~~**单根元素**（`<Transition>` 空白风险）：五页 `<template>` 各只有一个根元素。~~
+   **第二轮已验，全部单根 ✅**（用 `@vue/compiler-sfc` 权威解析，非人工计数）。
+
+## 冒烟数据（待编排者按 §十二·十 清理）
+
+本次取证新增，**全部走 API 业务路径写入**（未直连库）：
+
+- `users` +1：`username="pfd5c0q"`（id=4，密码 `proof123456`，昵称「取证账号」）
+- 该用户 id=4 名下的：`attempts`若干、`xp_events`若干、`lesson_progress`(lesson 1, done)、
+  `checkins` 1、`user_streaks` 1、`user_achievements`(视印章条件可能若干)
+- `wrong_book`：item#1 一条，**已被本轮重练移出**（`correct_since` 达 2）
+- 注：`lesson 1` 的 `lesson_progress` 与 `unit 1` 的 `doneCount` 会因本轮结算而变化，
+  但**属于 id=4 这个用户**，删用户即可回零
+
+> §十二·十 要求「按用户名前缀删净」。本路这次的冒烟账号前缀是 **`pf`**（`pfd5c0q`）。
+> 更早四路验收轮次留下的 `feverify` 不属本轮。
+
+### 第四轮追加的写入（同一账号 `pfd5c0q` / id=4）
+
+第四轮的 L1 / L4 / L5 组**有真实写入**（走页面真实交互，**未直连库**）：
+
+| 轮次 | 写入 | 端点 |
+|---|---|---|
+| L2 组 | **零写入**（`route.abort()` 拦掉 attempts 与 finish，已硬断言） | — |
+| L1+L5 组 | 无业务写入 | — |
+| L4 组（assert3） | lesson 3「方位三字」15 题全对 + 结算 1 次 | `POST /attempts`×15、`POST /lessons/3/finish`×1 |
+| L4 组（assert4） | lesson 2「人的样子」20 题全对 + 结算 1 次 | `POST /attempts`×20、`POST /lessons/2/finish`×1 |
+
+→ **单元 1「象形入门」已 3/3 全过**（`doneCount 1 → 3`、`progress 0.33 → 1`）。
+
+id=4 当前快照（2026-11-23T15:22Z）：
+
+```
+/profile/summary -> xp.total 507（117 → 287 → 507）· learn.lessonsDone 3/19
+                    itemsDone 40（5 → 20 → 40）· accuracy 0.98（0.9 → 0.96 → 0.98）
+                    streak.current 1 · stamps 2/15 · todayCheckedIn true
+/xp/ledger       -> total 49 条（12 → 28 → 49）
+/lessons/2       -> {"status":"done","bestScore":20,"bestTotal":20,"attemptsCount":20}
+```
+
+（增量自查：287→507 = 20 题 ×10 XP + 课时奖 20 XP ✅；events 28→49 = +21 = 20 次 attempts + 1 次
+`lesson_done` ✅。全部落在 id=4 名下，删该用户即回零。）
+
+> 供编排者清场参考：数据是**真实业务写入**，不是 fixture 污染 —— 但它们会改变
+> 单元 1 的全局 `doneCount`，若后续有人用「单元 1 是否全过」当开场条件，需知此状态。
+>
+> **第五轮的写入与最新快照见文末「第五轮追加的写入」**（同一账号 `pfd5c0q` / id=4；
+> 第五轮结束时 `wrong_book` 已自清为 0、`xp.total=1504`、`current_streak=2`）。
+
+---
+
+# 第四轮：浏览器硬断言（Playwright + 真实坐标点击）
+
+时间：2026-11-23 15:04 ~ 15:22Z　　视口：390×844 dpr=2 `isMobile+hasTouch`
+目标：`http://127.0.0.1:5173`（vite dev server，代理到 `:8091`）
+账号：`pfd5c0q` / id=4（`storageState` 复用，**全程零次 login**，不消耗登录限流）
+
+工具：复用 `D:/coding/SmartCampus/web/node_modules/playwright-core` +
+`ms-playwright/chromium-1208`，**未安装任何依赖**。脚本与原始输出在
+`%TEMP%/hd-fe-learn-browser/`（`assert1.cjs`/`assert2.cjs`/`assert3.cjs`/`assert4.cjs`
+与 `out1.txt`/`out2.txt`/`out3.txt`/`out4.txt`，另有截图 `l1-*.png`/`l2-sum.png`/`l4-*.png`）。
+
+**点击纪律**：不用 `.click()`（会自动滚动重试 ⇒ 假通过）。一律先 `scrollIntoView`，
+再取 `getBoundingClientRect()` 中心做 `elementFromPoint()` 命中自检
+（`hitSelf` / `inView` / `inTabbar` 三个读数），通过后才 `page.mouse.click(cx, cy)`。
+
+## 结论速览
+
+| 里程碑 | 浏览器层结论 | 依据 |
+|---|---|---|
+| L1 单元 → 课时 | ✅ 通过 | 6 张单元卡 + 5 张题型卡渲染；点单元卡 `hitSelf"=true` → URL 变 `#/pages/lesson/lesson?unitId=1` → 3 张课时卡 |
+| L2 四种题型 | ✅ 通过 | 25 题走完，五型各 5 题、**逐型对错两面都覆盖**，`fb-ok`/`fb-no` 与选项着色均正确 |
+| L3 错题本 | ✅ **通过（第五轮补）** | 见文末「第五轮」：A/A1/A2/B/C/D 六段硬断言，`cleared 0→4`、`remaining 4→0`、回本子空态 |
+| L4 进度条 | ⛔ **1 处真实缺陷** | 写侧全绿；**lesson 页课时卡在返回后不刷新**（见 §L4-b） |
+| L5 笔画描红 | ✅ 通过 | 28 字零缺零余（= 库内 `kind='stroke'` 字符集）；`/src/pages/stroke/vendor/hanzi-writer.min.js` 本地加载；**CDN 请求 0 条、非本机请求 0 条** |
+
+## L1 + L5 组（`out1.txt`，15:07:50Z）
+
+- **L1**：`.unit` 卡 6 张、kind 卡 5 张；对单元卡做硬断言
+  `{"ok":true,"inView":true,"hitSelf":true,"inTabbar":false}`；点后 URL
+  `#/pages/lesson/lesson?unitId=1`，3 张课时卡（lesson1「已完成 100%」/ lesson2、3「未开始 0%」）。
+  → 这一读数是后面 L4 的基线。
+- **L5**：`.trace-box` 读得 `{"paths":12,"hasSvg":true,"degradedToStatic":false}`；
+  `scriptSrcs` 含 `/src/pages/stroke/vendor/hanzi-writer.min.js`；
+  `createTrace` **28/28** 成功；**匹配 CDN 的请求 0 条 ✅**；**非本机请求 0 条 ✅**。
+  控制台唯一一条 404 经查是 `/favicon.ico`（vite dev server 无图标），**不是 API**
+  —— curl 直接探测 + 请求日志里无任何真实 `/api/` 4xx 双重确认。
+
+## L2 组（`out2.txt`，15:12:32Z）—— **零写入**
+
+`POST /api/attempts` 与 `POST /api/lessons/:id/finish` **均被 `route.abort()` 拦掉**，
+故本组对数据库**零写入**，可重复重跑。
+
+25 题（`自然五字`）走完：五型各 5 题，每型**第 1 次答对、第 2 次答错**，覆盖表逐型全绿：
+
+```
+recognize  共 5 题 · 答对 3（fb-ok） · 答错 2（fb-no） · 反馈词样例："就是这个 / 再想想"
+pinyin     …同
+meaning    …同
+stroke     …同（答对=真描 3~4 笔；答错=点「写不出来」）
+listen     …同
+```
+
+- 答对：`fb hd-card fb-ok` +「就是这个」；答错：`fb hd-card fb-no` +「再想想」+ 正确答案栏。
+- 选项着色逐题核对：答对 = 正确项 `is-right`、其余 `is-dim`；答错 = 错选项 `is-wrong`、
+  正确项 `is-right`、其余 `is-dim`。**五种题型全对**。
+- `.bar-fill` 宽度序列 `4 → 8 → … → 100`，**单调不减 = true**。
+- **降级文案与计数自洽**（这是本组最有价值的一处交叉验证）：因为写入被拦，
+  结算页显示 `sub="成绩没能同步，这轮只是练手"` + `note="有几题没提交上去，这次的成绩不算数
+  —— 网络好的时候再练一遍。"` + `rows=["最好成绩—"]`，与
+  `POST /api/attempts 被拦次数：1`、`POST /api/lessons/1/finish 被拦次数：0` 完全对应。
+- 非 2xx：**(无)** ✅。
+
+> 附：「描红题答错时没有 `.is-wrong`」**不是缺陷** —— 描红分支不渲染 `.opt` 元素，
+> `is-wrong` 天然为 0。已把该项断言收进 `if (before.options.length > 0)`，
+> 并加反向断言（描红题若出现 `optCls` 才算异常）。
+
+## L4 组（`out3.txt` 15:16:19Z + `out4.txt` 15:19:46Z）—— **有真实写入**
+
+### L4-a 写侧全绿 ✅
+
+跑完 `方位三字`（lesson 3，15 题，**无任何 route 拦截**）：逐题 `fb-ok`，其中 3 道描红
+**真描**（`3笔/26位移`、`3笔/30位移`、`4笔/36位移`，均判对）。
+
+- 请求层：`POST /api/attempts` 200 × **15（期望 15）**、`POST /api/lessons/3/finish` 200 × **1**；
+  **非 2xx：(无)** ✅
+- `finish` 回包：`{"lessonId":3,"status":"done","bestScore":15,"bestTotal":15,"firstDone":true,"xpEarned":20,…}`
+- 落库增量：单元 1 `doneCount 1→2`、`progress 0.33→0.67`；lesson 3 `status none→done`;
+  `lesson_progress {"status":"done","bestScore":15,"bestTotal":15,"attemptsCount":15}`；
+  `xp 117→287`；`learn.lessonsDone 1→2`、`itemsDone 5→20`、`accuracy 0.9→0.96`；
+  `xp_events 12→28`。
+- 答题中 `.bar-fill`：`7 → 13 → … → 100`（单调不减 = true）。
+- 结算页四行文案与源码常量逐字一致（`最好成绩15 / 15`、`课时奖励+20 XP`、`连续打卡1 天`）。
+
+### L4-b ⛔ 缺陷：课时卡不随答题刷新（`assert4.cjs` 定性）
+
+**谜面**：`out3.txt` 里写侧全绿，但回读 lesson 页时 lesson3 卡停在 `badge="未开始" / barW="0%"`。
+两个互斥解释：① 数据/渲染链路坏了；② **页面实例没重新取数**（uni-app H5 压栈保留实例，
+`onLoad` 不重跑）。第四轮把两者分开证：
+
+**A 段 — 全新挂载（排除①）**：新开页面直接进 lesson 页 ⇒
+`lesson3 卡 badge="已完成" barW="100%"`。**数据与渲染都对。**
+
+**B 段 — DOM 实例探针（排除「读到隐藏旧实例」的测试伪影）**：
+
+```
+uni-page 实例数：1
+  [0] route=pages/lesson/lesson display=block
+      badges=["已完成","未开始","已完成"]  bars=["100%","0%","100%"]
+```
+
+⇒ **全页只有一个 `uni-page` 实例，不存在隐藏旧实例**。`out3.txt` 那两条不达标
+**不是"取错了元素"**。顺带说明：hash 跳到别的路由再跳回来会**重新挂载**（B 段读到的是
+新值），所以「用 `page.goto` 模拟返回」**验不出**这个问题 —— 必须走真实页面栈。
+
+**C 段 — 真实用户路径（决定性）**：
+`learn` 页点单元1（`hitSelf` 自检通过）→ `navigateTo` lesson 页（进答题前 lesson2 卡
+`未开始 / 0%`）→ 点 lesson2 卡 `.card-top`（`@tap="startLesson"`）→ 答完 **20 题全对**
+（4 道描红真描：`2笔/30`、`3笔/42`、`3笔/28`、`3笔/34`）→ 结算页 →
+点 **`.sum-acts .act-ghost`「回课时」**（走 `quit()` → `uni.navigateBack()`）→ 回 lesson 页：
+
+```
+URL：…/#/pages/lesson/lesson?unitId=1
+路由栈：["pages/lesson/lesson","pages/practice/practice","pages/learn/learn","pages/lesson/lesson"]
+⇒ **用户看到的那张 lesson2 卡**：badge="未开始" barW="0%"
+   文案="二 | 人的样子 | 未开始 | The Body | … | 20 题 | 描红 | 开始"
+这一轮确实结算成功了吗：finish 回包 status=done bestScore=20 ✅（POST 200 计数：attempts ×20、finish ×1）
+```
+
+**同一时刻后端说的是同一件事的反面**（独立 API 直读，非页面读数）：
+
+```
+GET /api/units          -> unit1 {"doneCount":3,"lessonCount":3,"progress":1}
+GET /api/units/1/lessons-> lesson2 {"status":"done","bestScore":20,"bestTotal":20}
+```
+
+**根因**（代码定位，未改动）：
+
+| 文件 | 行 | 事实 |
+|---|---|---|
+| `pages/lesson/lesson.vue` | 75 | `onLoad((query) => { … loadUnitHead(); loadLessons() })` —— **只有 `onLoad`，没有 `onShow`** |
+| `pages/lesson/lesson.vue` | 119 / 127 | badge ← `statusCn(l.status)`、条宽 ← `pct(l)`，都来自 `lessons`，而 `lessons` 只在 `loadLessons()` 里赋值 |
+| `pages/learn/learn.vue` | 3 / 12 / 97 | `import { onShow }`，注释原文：**「这是 tabBar 页，用 onShow 而不是 onMounted：从答题页返回时进度条要立刻变，onMounted 只跑一次就不刷新了。」** |
+
+⇒ **同一位作者在 `learn.vue` 明确知道并处理了这件事，`lesson.vue` 漏了。**
+`uni.navigateBack` 回压栈页时 `onLoad` 不重跑 ⇒ 课时卡的完成度停留在进答题前的快照。
+
+**分半结论（L4 判据原文「课时完成度与单元进度条随答题动起来」）**：
+
+- **单元进度条这一半 ✅**：`learn.vue` 用 `onShow`，实测 `33% → 67% → 100%`
+  （终值 `已学 3/3`，`out-learn.txt`）。返回即刷新。
+- **课时完成度这一半 ⛔**：`lesson.vue` 用 `onLoad`，`navigateBack` 返回后**不刷新**。
+
+**影响面**：纯展示态滞后，**无数据丢失、无接口错误**（写入与读接口都正确），
+用户在 lesson 页会看到「刚做完的课仍写着未开始 / 0%」，要退到 learn 页再进来才会对。
+唯一触发路径是「从答题页返回 lesson 页」（即结算页的「回课时」）。
+
+**修法（一行，作者因处于冻结期未改）**：
+`pages/lesson/lesson.vue` 加 `onShow(() => loadLessons())`（或把 `onLoad` 里的取数挪进 `onShow`），
+与 `learn.vue` 对齐。
+
+## 仍未验（第四轮之后）
+
+1. ~~**L3 错题本的浏览器侧**：`wrongbook` 页面的渲染、`WrongItem.hint` 的显示、
+   「连着做对两次移出」在**页面上**的体现。~~ ✅ **已由第五轮补齐**（见文末第五轮）。
+2. **L4-b 修复后的复验**：需在 `onShow` 补上之后重跑 `assert4.cjs` 的 C 段，
+   期望 lesson2 卡 `已完成 / 100%`。
+3. **四套 dist 的产物级验收**：`uni build` 归编排者串行执行，本路**未跑构建**。
+   L5 的「不走 CDN」目前是**源码/dev-server 级**证据（`scriptSrcs` + 网络日志），
+   产物级仍需在重打的 dist 上 grep + DevTools Network 复核。
+
+## 第四轮的事实性附注（供复核者）
+
+- `page.evaluate` 的四个坑（本路踩过并已规避，复核者若重写脚本会遇到）：
+  ① **只序列化函数源码** ⇒ Node 侧模块常量与同级助手函数**都带不进浏览器**，
+  查询必须内联进函数体；② **只收 1 个参数**（多了抛 `Too many arguments`）⇒ 助手一律单对象参数；
+  ③ 传字符串箭头函数会被当**表达式**求值 ⇒ 立即为真 = 假通过；
+  ④ `.click()` 自动滚动重试 ⇒ 命中测试必须用真实坐标 + `elementFromPoint()`。
+- **`animateOnInit: true`**：进描红题会先自动演示一遍笔顺，**演示期间落笔算错笔**。
+  真描前须等演示结束 —— 判据是墨层「已上墨笔数」**先 >0 再回到 0**（`inkState()`）。
+  本路三次真描 0 错笔即靠此。
+- **`hanzi-writer` 的 fill 类判据一律无效**：库里 12 条 path 全是 `fill:none`、
+  `stroke-width:200px`，分层靠 `stroke` 颜色（轮廓 `rgb(222,214,198)` / 墨 `rgb(26,26,29)` /
+  朱 `rgb(174,51,46)`）。判「有没有上墨」必须读 `opacity`，不能读 `fill`。
+
+---
+
+# 第五轮：L3 浏览器硬断言（错题本页与重练）—— **补上第四轮「仍未验」第 1 项**
+
+时间：2026-11-23 `15:57Z` / `16:01Z` / `16:03Z`（本地 23:57 / **00:01** / 00:03，第 2 跑**跨了本地零点**）
+视口与工具同第四轮（390×844 dpr=2 `isMobile+hasTouch`；`playwright-core` 复用，**零安装**）
+账号：`pfd5c0q` / id=4（`storageState` 复用，**全程零次 login**）
+脚本 `%TEMP%/hd-fe-learn-browser/assert5.cjs`；原始输出 `out5.txt`（143 行）；
+截图 `a5-A-sum.png` / `a5-B-reveal.png` / `a5-B-wrongbook.png` / `a5-C-sum.png` /
+`a5-C-wrongbook.png` / `a5-D-sum.png` / `a5-D-empty.png`
+
+**两条纪律**：① 点击同第四轮（真实坐标 + `elementFromPoint()` 命中自检，
+不用会自动滚动重试的 `.click()`）；② **写入全部经真实 UI** —— 制造错题走
+`learn → 单元1 → lesson2 卡 → 答题 20 题 → 结算 → 回课时`，重练走错题本页的
+「全部重练」按钮，**没有任何一次直连库、没有任何一次绕过页面调写接口**。
+
+## 结论速览（四条判据逐条达标）
+
+| 判据（验收标准原文：答错的题出现在 `wrongbook`，且能重练） | 结论 | 关键读数（`out5.txt`） |
+|---|---|---|
+| 答错的题**进本子** | ✅ | 4 题故意答错 → `GET /wrongbook total=4`，`byLesson=[{lessonId:2,lessonTitle:"人的样子",count:4}]`，itemId 集合与故意答错集合**完全一致** |
+| **含描红题的「写不出来」** | ✅ | 第 19 题 `stroke` 走「写不出来」提交空串 → `item 36 [stroke] char="口" correctSince=0` 进本子 |
+| 页面渲染 / `hint` 展开 | ✅ | 4 张卡（听音/描红/语义/认读）；展开后 `hint="提示：一张张嘴，外面是嘴唇。" answer="口"`，与 API 逐字一致 |
+| 课时筛选不塌 | ✅ | 点 `人的样子 · 4` → `sumSide="只算这一课"`、按钮 `重练这一课`；chips 元数据仍保持全集口径 |
+| **连对两次自动移出** | ✅ | 第 1 轮 `cleared:0 remaining:4`（卡片 1/2 亮 1 格）→ 第 2 轮 `cleared:4 remaining:0`（`correctSince:2`）→ 回本子**空态**、API `total=0` |
+
+## A 经真实 UI 制造错题（lesson2「人的样子」，20 题）
+
+题型分布 `{"recognize":4,"pinyin":4,"meaning":4,"stroke":4,"listen":4}`；故意答错 4 题
+（取每型第 4 个、跨字取，让错题本四型都有代表）：
+
+| 题号 | itemId | kind | 作答 | 反馈 |
+|---|---|---|---|---|
+| 16 | 33 | recognize | W 点 `xiǎo`（正解 `kǒu`） | `fb-no` |
+| 18 | 35 | meaning | W 点 `person`（正解 `mouth`） | `fb-no` |
+| 19 | 36 | stroke | W 点「写不出来」→ 提交空串 | `fb-no` |
+| 20 | 145 | listen | W 点 `人`（正解 `口`） | `fb-no` |
+
+其余 16 题全对（含 4 道描红真描 `2~3 笔`）。20 题逐题读数在 `out5.txt` 第 20–40 行。
+
+- **A1 结算页**：`{"num":"16","den":"/ 20","word":"这一课过了","sub":"最好成绩才作数，再练一遍可以冲更高","rows":["最好成绩20 / 20","连续打卡2 天","单元这一单元全过了"],"note":null,"acts":["再练一次","下一课","回课时"]}`；
+  `finish` 回包 `{"status":"done","bestScore":20,"bestTotal":20,"firstDone":false,"xpEarned":0,"checkin":{"created":false,"currentStreak":2,"xpEarned":0},"nextLessonId":3,"unitDone":true}`
+  → 点「回课时」后 lesson2 卡仍 `已完成 / 100%`：**16/20 不是更好成绩，best 未被拉低**（契约「best 只在变好时写」）。
+- **A2 落库核对**：4 条 `wrongTimes` 均为 4（前几轮遗留累计）、`correctSince=0`
+  —— **答错会把 `correct_since` 归零、把已掌握的行重新拉回错题本**（本轮实测到的额外结论）。
+  四条 `hint` 均为「一张张嘴，外面是嘴唇。」；**只有描红题带 `char`、只有听音题 `audio=有`**。
+
+## B 错题本页（真 tabBar 切过去，本段零写入）
+
+```
+tabBar 实例读数：[{"labels":["学习","错题本","我的"],"w":390,"h":50,"display":"block"},
+                 {"labels":["学习","错题本","我的"],"w":390,"h":50,"display":"flex"}]
+点「错题本」：坐标={cx:195,cy:819} 尺寸=130×50 hitSelf=true hit=DIV.uni-tabbar__label
+切后 URL：/#/pages/wrongbook/wrongbook
+"共 4 道待复习"　"涉及 1 个课时"
+chips：[全部] | 人的样子 · 4
+卡片数=4　go="全部重练"　尾注="连着做对两次，这道题就自动移出错题本。"
+ 1. no=1 kind=听音 lesson=人的样子 stem="听音频，选出你听到的内容" 连对=0/2(亮0) 错过 4 次 音频=有
+ 2. no=2 kind=描红 lesson=人的样子 stemChar="口"                  连对=0/2(亮0) 错过 4 次 音频=无
+ 3. no=3 kind=语义 lesson=人的样子 stem="口"                      连对=0/2(亮0) 错过 4 次 音频=无
+ 4. no=4 kind=认读 lesson=人的样子 stem="口"                      连对=0/2(亮0) 错过 4 次 音频=无
+展开第一条后：hint="提示：一张张嘴，外面是嘴唇。"　answer="口"　toggle 还在=false
+点课时标签 "人的样子 · 4" → sumSide="只算这一课" go="重练这一课" 卡片数=4 chips=全部 | [人的样子 · 4]
+```
+
+- **`tabBar` 实例有两个**（`display:block` 与 `display:flex`）：`document.querySelector`
+  会先命中隐藏的那份（rect 0×0）。脚本遍历**所有**实例、跳过宽高 <1 的才取到真身 ——
+  复核者重写脚本时会踩这一条。
+- 题型中文名 `听音/描红/语义/认读` 与 `wrongbook.vue` 的 `kindLabel()` 逐字对齐
+  （`pinyin→拼音`、`meaning→语义`、`listen→听音`、`stroke→描红`、默认`认读`）。
+
+## C 第一轮重练（`mode=wrong`，一轮**批量提交 1 次**）
+
+```
+URL：/#/pages/practice/practice?mode=wrong
+答题页头部："错题重练" / "来自 1 个课时"
+4 题全对（含 stroke 真描 3 笔）
+结算页：{"num":"4","den":"/ 4","word":"再练一轮","sub":"错题本还剩 4 道待复习",
+        "rows":["本次清掉0 道","还欠着4 道"],"note":null,"acts":["再练一次","回错题本"]}
+POST /wrongbook/practice 回包：{"results":[4 条均 isCorrect:true, correctSince:1],"cleared":0,"remaining":4}
+回来后：4 张卡 连对=1/2(亮1) 错过 4 次；API total=4 correctSince=[1,1,1,1]
+```
+
+- `cleared:0` 是**正确**的：`WRONG_MASTERED_AT=2`，第一轮连对只到 `correct_since=1`。
+  源码依据：`server/src/routes/wrongbook.ts` 的 `if (r.correctSince >= WRONG_MASTERED_AT) cleared += 1`，
+  `remaining` 取 `owedCount()`（`correct_since < 2` 的行数）。
+- 结算页文案与 `cleared` 值**联动正确**：`cleared=0 → word="再练一轮"`（`practice.vue:350`），
+  `note=null`（`practice.vue:658-660`：`cleared > 0` 才写「已自动移出」）。
+- 返回错题本后卡片从 `0/2(亮0)` 变 `1/2(亮1)` —— **`onShow` 刷新链路通**。
+
+## D 第二轮重练（连对到 2 → 移出）
+
+```
+结算页：{"num":"4","den":"/ 4","word":"清掉了一批","sub":"错题本还剩 0 道待复习",
+        "rows":["本次清掉4 道","还欠着0 道"],
+        "note":"连着答对两次的题，已经自动移出错题本了。","acts":["再练一次","回错题本"]}
+POST /wrongbook/practice 回包：{"results":[4 条 correctSince:2],"cleared":4,"remaining":0}
+回错题本：stateTitle="还没有错题"
+          note="答错一次就会收进来 —— 不挑不拣。 连着做对两次，它自己就移出去了。"
+          btn="去练一练" 卡片数=0　.sum-main=null　.go=null
+API 侧：total=0 byLesson=[]
+```
+
+**这是 L3 判据里最关键的一格**：`1/2 → 空态`，页面、`POST` 回包、`GET /wrongbook`
+三处同时归零；`remaining` 归 0 后 `.sum-main`/`.go` 整块换成空态（读到 `null`）。
+
+## XP 与打卡（跨代码路径的交叉校验）
+
+```
+XP：755 → 1003（第 1 跑，+248 = 答对 24×10 + 答错 4×2）
+    1003 → 1256（第 2 跑，+253 = 248 + 打卡 5 —— 见下「跨零点」）
+    1256 → 1504（第 3 跑，+248）
+课时进度：{"lessonsDone":3,"lessonsTotal":19,"itemsDone":40,"accuracy":0.89}
+```
+
+- 第 3 跑 XP 增量与「答对 24 题 × 10 + 答错 4 题 × 2」**精确吻合**，已写成硬断言
+  （`assert5.cjs` 收尾段）。⇒ 重练走的确实是 `judgeAndPersist()`，与新课答题同一套计分。
+- **本地零点跨天（本轮新发现，属脚本自身的坑，不是产品缺陷）**：第 2 跑落在**本地 00:01**，
+  `POST /lessons/2/finish` 顺带打卡成功（`checkin":{"created":true,"currentStreak":2,"xpEarned":5}`），
+  结算页相应多出一行 `"连续打卡2 天 · +5 XP"` —— **产品行为正确**；
+  是脚本原先的 XP 断言只算了答题分 ⇒ 假红。已改成**跟着 `finish` 回包走**
+  （`created=true` 才把 `checkin.xpEarned` 计入期望），并加一条「打卡行有没有 `+XP` 必须与
+  `checkin.created` 一致」的双向断言。这一跑的输出留档为 `out5-crossday-253.txt`（⛔ 1 条不达标），
+  作为「断言为什么会假红」的可复核记录。
+
+## 观察项 OB-1（框架内部告警，**不是本车道的缺陷**，冻结期内不改）
+
+`out5.txt` 控制台只剩两条 `console.error`，均为同一处：
+
+```
+TypeError: Cannot set properties of null (setting 'scrollLeft')
+    at @dcloudio/uni-h5/dist/uni-h5.es.js:14594:49   （经 __wdc 卸载钩子触发）
+```
+
+- **出现次数 = 2**，与「离开带 chips 的错题本页」的次数（B→C、C 回来→D）**完全吻合**。
+- 全车道唯一的 `<scroll-view>` 在 `wrongbook.vue:52-61`（`.chips` 横滑，`:scroll-x="true"`）——
+  已 grep `pages/{learn,lesson,practice,wrongbook,stroke}` + `pages.json` 确认无第二处。
+- 判定：uni-app 框架的 scroll-view watcher 在页面卸载时打到了已置 null 的节点。
+  **页面功能不受影响**（课时筛选实测可用）。可选缓解：`.chips` 改普通 `view` + `overflow-x:auto`。
+- 另一条历史 404（favicon）在第 3 跑**已消失**：脚本改用 `m.location().url` 过滤
+  （原先按 `m.text()` 过滤，而 404 的 `text()` 里根本没有 "favicon" 字样 ⇒ 漏网）。
+  同轮实测 lesson2 的四条音频 `/audio/{ren,da,xiao}.mp3` **均为 200** ⇒ 那唯一一条 404
+  确系 `favicon.ico`，**不是音频、不是 API**。
+
+## 本组的三次重跑与脚本自身缺陷修正（留档，便于复核者判读）
+
+| 跑 | 时间 | 结果 | 修的是什么 |
+|---|---|---|---|
+| 1 | 15:57Z | ✅ 全绿 | —（这一跑暴露了下面 4 个脚本缺陷） |
+| 2 | 16:01Z | ⛔ 1 条（XP 253≠248） | **跨零点打卡奖励未计入断言** ⇒ 改成跟 `finish` 回包走（见上） |
+| 3 | 16:03Z | ✅ 全绿（`out5.txt`） | favicon 过滤改 `location()`、`strokeFail` 标签补注、结算行断言补齐 |
+
+第 1 跑之前修掉的脚本缺陷（都是**断言写错**，不是产品缺陷）：
+① C 段期望值写反（原以为第 1 轮会清掉，实为 `cleared:0`）；② 跨元素拼接的空白假设
+（Vue `whitespace:'condense'` 删掉相邻 `<text>` 之间的空白 ⇒ 真实行是「本次清掉4 道」，
+断言须先去空白，已加顶层 `flat()`）；③ `SKIP_A` 分支停在 `about:blank` ⇒ DOM 里没有
+`uni-tabbar`（已补一次导航）；④ 读错选择器（`.head-title` 实为 `.top-title`）。
+
+## 第五轮追加的写入（同一账号 `pfd5c0q` / id=4）
+
+三跑各 `POST /attempts`×20 + `POST /lessons/2/finish`×1 + `POST /wrongbook/practice`×2 = **23 条/跑**，
+三跑共 **69 条，非 2xx 0 条**。全部走页面真实交互，**未直连库**。
+
+- `wrong_book`：跑后自清（D 段连对两次全部移出，`total=0`）—— **不需要编排者额外清这一项**。
+- `attempts` / `xp_events` 会各 +69（与新课答题同构）；`checkins`/`user_streaks` 因第 2 跑跨零点
+  变为 `current_streak=2`（**属于 id=4 这个用户**，删用户名 `pf` 前缀即回零）。
+- id=4 当前快照（2026-11-23T16:04Z）：`xp.total 1504`、`lessonsDone 3/19`、`itemsDone 40`、
+  `accuracy 0.89`；`wrong_book` **0 条**；单元 1 仍 3/3 全过。
+
+## 仍未验（第五轮之后）
+
+1. ~~L3 错题本的浏览器侧~~ ✅ **第五轮已补**（A/A1/A2/B/C/D 六段，见上）。
+2. ~~L4-b 修复后的复验~~ ✅ **第六轮已补**（见下）。**D1 已修并复验通过。**
+3. **四套 dist 的产物级验收**：`uni build` 归编排者串行执行，本路**未跑构建**。
+   L5 的「不走 CDN」目前是**源码/dev-server 级**证据，产物级仍需在重打的 dist 上复核。
+
+---
+
+# 第六轮：D1 修复 + L4-b 复验（变异测试）
+
+**时间**：2026-11-23T16:20Z / 16:21Z　**工具**：`assert6.cjs`（新写，Playwright + 真实坐标点击 + 真实页面栈）
+**靶子**：unit 5「上街办事」（12 题/课，纯点选型 —— `{"recognize":4,"pinyin":4,"meaning":4}`，
+无描红、无听音、无 hint，所以脚本不需要任何降级分支就能全答对，断言可以要求满分）
+**账号**：`pfd5c0q` / id=4　**视口**：390×844 dpr=2，`isMobile + hasTouch`
+
+## 为什么要重跑、以及为什么要换靶子
+
+- 第四轮 §L4-b 用的靶子是 **lesson 2**，本轮开工时 lesson 2、3 **都已经是 `done`** ——
+  在已完成的课上重跑，「修前」状态本身就显示「已完成」，**变异测试红不起来，等于没验**。
+  故换到 unit 5 两个当时仍为 `none` 的课时：修前 **lesson 14「买东西」**（转红），
+  修后 **lesson 15「出门坐车」**（转绿）。
+- **路径纪律**：全程走**真实页面栈**（点单元卡 `navigateTo` / 点「回课时」`navigateBack`），
+  **不用 `page.goto` 模拟返回** —— 第四轮 §方法论已证：hash 路由下 `page.goto` 到别的页面再跳回来
+  **会重新挂载**，恰好绕过 `onLoad` 不重跑这个根因，所以那样验不出 D1。
+
+## 修复（一行级，fe-learn 独占文件，契约 §5 写权限内）
+
+`mobile/src/pages/lesson/lesson.vue`：
+
+```diff
+-import { onLoad } from '@dcloudio/uni-app'
++import { onLoad, onShow } from '@dcloudio/uni-app'
+
+-onLoad((query: any) => {
+-  unitId.value = Number(query?.unitId || 1)
+-  loadUnitHead()
+-  loadLessons()
+-})
++// onLoad 只负责接参；取数挪进 onShow
++onLoad((query: any) => {
++  unitId.value = Number(query?.unitId || 1)
++})
++
++onShow(() => {
++  if (!unitId.value) return
++  loadUnitHead()
++  loadLessons()
++})
+```
+
+**为什么这么拆而不是简单加一行 `onShow(() => loadLessons())`**：首进页面时
+`onLoad` 先于 `onShow`，若 `onLoad` 里仍留着取数，会**双取**（两次 `GET /units/:id/lessons`）。
+把取数整体挪进 `onShow` 后，首进与返回走**同一条**路径，不存在两套逻辑。
+
+## 第六轮 · 红：修前复现（`--expect=broken`，靶子 lesson 14）
+
+原始输出：`out6-pre.txt`（本文件同目录外的取证工作区，关键行逐字抄录于下）
+
+```
+## A 前置读数（只读）
+  learn 页「上街办事」单元卡：barW="0%"
+  lesson 页「买东西」卡（全新挂载）：badge="未开始" barW="0%"
+  ⇒ 前置条件（靶子必须还是「未开始 / 0%」）：✅ 成立
+
+## C 真实页面栈（learn → 点单元 → 点课时 → 答完 → 点「回课时」）
+  点单元后 URL：http://127.0.0.1:5173/#/pages/lesson/lesson?unitId=5
+  路由栈：["pages/learn/learn","pages/lesson/lesson","pages/lesson/lesson"]
+  点「买东西」卡：{"cx":195,"cy":280.3,"w":313,"h":80,"hitSelf":true,"inView":true}
+  点课时后 URL：.../pages/practice/practice?lessonId=14
+  课时：买东西　题量：12　题型：{"recognize":4,"pinyin":4,"meaning":4}
+  12 题全部 fb-ok（1/12 8% → 12/12 100%，逐题读数见 out6-pre.txt）
+
+## C1 结算页
+  {"num":"12","den":"/ 12","word":"这一课过了","sub":"第一次完成这一课",
+   "rows":["最好成绩12 / 12","课时奖励+20 XP","连续打卡2 天"],"acts":["再练一次","下一课","回课时"]}
+  finish 回包：{"lessonId":14,"status":"done","bestScore":12,"bestTotal":12,
+                "firstDone":true,"xpEarned":20,"checkin":{"created":false,"currentStreak":2,"xpEarned":0},
+                "nextLessonId":15,"unitDone":false}
+
+## C2 点「回课时」（quit → uni.navigateBack）
+  回来 URL：.../#/pages/lesson/lesson?unitId=5
+  uni-page 实例数：1
+    [0] route=pages/lesson/lesson display=block lessonCards=3
+        badges=["未开始","未开始","未开始"] bars=["0%","0%","0%"]
+  ▶ 用户停在这一页看到的那张「买东西」卡：badge="未开始" barW="0%"
+
+## C3 退回 learn 页（单元进度条那一半）
+  ⇒ 单元进度条 "0%" → "33%"：✅ 上升
+
+## 裁决
+  ✅ **变异测试转红**：真实路径下，结算成功、API 已是 done，用户看到的「买东西」卡仍是 "未开始" / "0%"
+  L4 另一半（单元进度条）：✅ 上升
+  非 2xx：0 条 ✅
+```
+
+**这跑说明什么**：`finish` 回包已经是 `status:done / 12/12 / firstDone:true`，
+同一时刻 lesson 页那三张卡**还全是** `未开始 / 0%` —— D1 在**真实用户路径**上被复现，
+且**不是测试伪影**（`uni-page` 实例数 = 1，不存在「读到隐藏旧实例」；
+A 段全新挂载读得到「未开始」排除数据层脏）。同时单元进度条已经是 `0% → 33%`，
+**把 L4 的两半在同一个页面栈里对照出来了：单元进度条 ✅ / 课时完成度 ⛔**。
+
+## 第六轮 · 绿：修复后复验（`--expect=fixed`，靶子 lesson 15）
+
+原始输出：`out6-post.txt`，同一脚本、同一路径、只换了靶子课时。
+
+```
+## A 前置读数（只读）
+  learn 页「上街办事」单元卡：barW="33%"          ← 上一跑（lesson 14）留下的
+  lesson 页「出门坐车」卡（全新挂载）：badge="未开始" barW="0%"
+  ⇒ 前置条件：✅ 成立
+
+## C 真实页面栈
+  点单元后 URL：.../pages/lesson/lesson?unitId=5
+  lesson 页「出门坐车」卡（进答题前）：badge="未开始" barW="0%"   ← 进答题前确实是未开始
+  点「出门坐车」卡：{"cx":195,"cy":423.7,"w":313,"h":80,"hitSelf":true,"inView":true}
+  点课时后 URL：.../pages/practice/practice?lessonId=15
+  课时：出门坐车　题量：12　题型：{"recognize":4,"pinyin":4,"meaning":4}
+  12 题全部 fb-ok（1/12 8% → 12/12 100%）
+
+## C1 结算页
+  {"num":"12","den":"/ 12","word":"这一课过了","sub":"第一次完成这一课",
+   "rows":["最好成绩12 / 12","课时奖励+20 XP","连续打卡2 天"],"acts":["再练一次","下一课","回课时"]}
+  finish 回包：{"lessonId":15,"status":"done","bestScore":12,"bestTotal":12,
+                "firstDone":true,"xpEarned":20,"checkin":{"created":false,"currentStreak":2,"xpEarned":0},
+                "nextLessonId":16,"unitDone":false}
+
+## C2 点「回课时」（quit → uni.navigateBack）
+  回来 URL：.../#/pages/lesson/lesson?unitId=5
+  路由栈：["pages/learn/learn","pages/lesson/lesson","pages/lesson/lesson"]
+  uni-page 实例数：1
+    [0] route=pages/lesson/lesson display=block lessonCards=3
+        badges=["已完成","已完成","未开始"] bars=["100%","100%","0%"]
+  ▶ 用户停在这一页看到的那张「出门坐车」卡：badge="已完成" barW="100%"
+     文案="二 | 出门坐车 | 已完成 | Getting Around | 上学怎么走，四个词说清楚。 | 8 分钟 · 12 题 · 最好 12/12 | 描红 | 再练一次"
+
+## C3 退回 learn 页（单元进度条那一半）
+  nav 返回按钮读数：{"cx":18,"cy":22,"w":26,"h":26,"hitSelf":true,"inView":true,"inTabbar":false}
+  ⇒ 单元进度条 "33%" → "67%"：✅ 上升
+
+## 裁决
+  ✅ **D1 已修**：点「回课时」返回 lesson 页，那张卡变成 "已完成" / "100%"
+  L4 另一半（单元进度条）：✅ 上升
+  非 2xx：0 条 ✅
+  控制台 / pageerror：（无）✅
+```
+
+**这跑说明什么**：同一条真实页面栈、同一个脚本，只差 `onShow` 那一处改动，
+读数从 `未开始 / 0%` 变成 `已完成 / 100%`，且卡上「最好 12/12」「再练一次」也一并刷新
+（说明是**真的重取了数据**，不是只有 badge 被改了）。**变异测试成立**：改动是必要且充分的。
+
+## 第六轮的事实性附注（复核时可能被误判成 Bug）
+
+1. **`checkin.created=false` 但结算页有「连续打卡2 天」**：`currentStreak=2` 是第五轮那一跑
+   （跨本地零点）打上的，本轮的 `checkin` 因当天已打过卡故 `created=false / xpEarned=0`。
+   **产品行为正确**，本轮 XP 断言不与它耦合（本轮主断言是卡面读数，不依赖 XP 增量）。
+2. **`unitDone=false` 是对的**：unit 5 有 3 课，跑完 lesson 15 是 2/3，故 `unitDone=false`、
+   learn 页单元进度条 `67%`。第 3 课（lesson 16「天气」）**故意不跑**，留着当后续靶子。
+3. **靶子课时是「纯点选型」不代表 L2 覆盖缩水**：四题型（含 stroke / listen）的浏览硬断言
+   在第四轮已补（`createTrace 28/28` + 真描红落墨 + 听音三文件 200）。第六轮只针对 D1，
+   故**故意挑最简单的课时**，把变量压到最少。
+4. **控制台 404 已定性**：第五轮那条 404 是 `favicon.ico`。第六轮把过滤条件从
+   「报文里含 `favicon`」改成「报文 **或** `location().url` 含 `favicon`」
+   （前者的报文只有 "Failed to load resource"，**过滤不掉**，是假阳性来源）。
+   改后两跑**控制台全空**。
+5. **D1 的「同根兄弟」没被漏掉**：本路独占的五个页面里，`learn.vue` 本来就是 `onShow`
+   （tabBar 页），`wrongbook.vue` / `profile.vue` 亦同；`lesson.vue` 是本轮修掉的唯一一处；
+   `practice.vue` / `stroke.vue` 是答题页，返回时不承载「需要刷新的列表读数」。
+   ⇒ **压栈页里「返回后要刷新」的只剩 lesson.vue 一处，已修。**
+
+## 仍未验（第六轮之后）
+
+1. ~~D1 修复后的复验~~ ✅ **本轮已补**，L1–L5 五条现在**都有浏览器侧证据且无已知缺陷**。
+2. **四套 dist 的产物级验收**：`uni build` 归编排者串行执行，本路**未跑构建**。
+   L5 的「不走 CDN」目前是**源码/dev-server 级**证据，产物级仍需在重打的 dist 上复核。
+3. **本轮的写入**：lesson 14 + lesson 15 各 12 题 → `attempts` / `xp_events` 各 +26 行左右，
+   `lesson_progress` 多 2 行（unit 5 变 2/3）。**这属于 id=4（`pf` 前缀）的冒烟数据**，
+   编排者按 §十二·十「按用户名前缀删净」清掉即可（第五轮已确认：删用户名 `pf` 前缀即回零）。

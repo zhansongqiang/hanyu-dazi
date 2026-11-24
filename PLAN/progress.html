@@ -1,0 +1,1181 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>汉语搭子开发进度</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap">
+<style>
+/* ============================================================
+   汉语搭子 · 开发进度大屏
+   深色为主（大屏默认），右上角可切浅色。
+   状态色经 OKLab 校验：深底 #131a24 上 L 0.48–0.67 全过、
+   CVD 相邻分离 ΔE 9.9、对比度全 ≥3:1；浅底 #ffffff 上同口径过。
+   「未开始」的灰是刻意保留的语义色，不参与彩色轮换。
+   ============================================================ */
+:root{
+  color-scheme: dark;
+  --bg:#0b0f16;
+  --panel:#131a24;
+  --panel-2:#1a2330;
+  --line:#243040;
+  --line-2:#36465e;
+  --fg:#e9eff7;
+  --fg-2:#a2b2c6;
+  --fg-3:#7b8da4;
+  --ok:#0aa072;
+  --pend:#b07c0b;
+  --run:#4a8ae8;
+  --block:#dd4444;
+  --idle:#78879a;
+  --ok-bg:rgba(10,160,114,.16);
+  --pend-bg:rgba(176,124,11,.18);
+  --run-bg:rgba(74,138,232,.16);
+  --block-bg:rgba(221,68,68,.16);
+  --idle-bg:rgba(120,135,154,.14);
+  --track:#1e2937;
+  --wash:rgba(74,138,232,.10);
+  --shadow:0 1px 2px rgba(0,0,0,.45), 0 10px 28px rgba(0,0,0,.30);
+  --glow:0 0 0 1px rgba(74,138,232,.40), 0 0 24px rgba(74,138,232,.20);
+  --sans:"Inter","PingFang SC","Hiragino Sans GB","Microsoft YaHei","Source Han Sans SC",system-ui,sans-serif;
+  --mono:"JetBrains Mono","SFMono-Regular",Menlo,Consolas,"PingFang SC","Microsoft YaHei",monospace;
+}
+:root[data-theme="light"]{
+  color-scheme: light;
+  --bg:#f5f7fa;
+  --panel:#ffffff;
+  --panel-2:#f1f3f6;
+  --line:#e3e7ec;
+  --line-2:#ccd3dc;
+  --fg:#12171e;
+  --fg-2:#4a5462;
+  --fg-3:#6b7683;
+  --ok:#04764a;
+  --pend:#bf8a0d;
+  --run:#2b5cb8;
+  --block:#b3261e;
+  --idle:#5f6a72;
+  --ok-bg:rgba(4,118,74,.09);
+  --pend-bg:rgba(191,138,13,.12);
+  --run-bg:rgba(43,92,184,.09);
+  --block-bg:rgba(179,38,30,.09);
+  --idle-bg:rgba(95,106,114,.10);
+  --track:#e6e9ee;
+  --wash:rgba(43,92,184,.06);
+  --shadow:0 1px 2px rgba(18,22,20,.05), 0 2px 10px rgba(18,22,20,.04);
+  --glow:0 0 0 1px rgba(43,92,184,.30), 0 0 18px rgba(43,92,184,.12);
+}
+
+*{box-sizing:border-box}
+html,body{margin:0}
+body{
+  background:var(--bg);
+  color:var(--fg);
+  font-family:var(--sans);
+  font-size:14px;
+  line-height:1.55;
+  -webkit-font-smoothing:antialiased;
+  padding-left:max(16px, env(safe-area-inset-left, 0px));
+  padding-right:max(16px, env(safe-area-inset-right, 0px));
+}
+/* 大屏的一层极淡辉光，给出纵深，不抢读数 */
+body::before{
+  content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:radial-gradient(1100px 460px at 50% -8%, var(--wash), transparent 72%);
+}
+.wrap{position:relative;z-index:1;max-width:1240px;margin:0 auto;padding-block:20px 48px}
+
+code,.mono{font-family:var(--mono);font-size:.85em;font-variant-ligatures:none}
+code{
+  background:var(--panel-2);border:1px solid var(--line);border-radius:4px;
+  padding:.06em .32em;white-space:nowrap;color:var(--fg-2);
+}
+.num{font-variant-numeric:tabular-nums}
+
+/* ---------------- 顶栏 ---------------- */
+.bar{
+  display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px;
+  padding:12px 16px;border:1px solid var(--line);border-radius:10px;
+  background:linear-gradient(180deg,var(--panel-2),var(--panel));
+  box-shadow:var(--shadow);
+}
+.bar .id{display:flex;flex-direction:column;gap:1px;min-width:0}
+.bar .kicker{
+  font-size:10.5px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:var(--fg-3);
+}
+.bar h1{margin:0;font-size:clamp(17px,3.4vw,22px);font-weight:700;letter-spacing:-.015em}
+.bar .sp{flex:1 1 auto}
+.bar .meta{display:flex;flex-wrap:wrap;gap:7px;align-items:center}
+.chip{
+  display:inline-flex;align-items:baseline;gap:5px;
+  border:1px solid var(--line);background:var(--panel);border-radius:6px;
+  padding:3px 9px;font-size:11.5px;color:var(--fg-3);white-space:nowrap;
+}
+.chip b{color:var(--fg);font-weight:600;font-family:var(--mono);font-variant-numeric:tabular-nums}
+button.tgl{
+  font:inherit;font-size:11.5px;color:var(--fg-2);cursor:pointer;
+  border:1px solid var(--line-2);background:var(--panel);border-radius:6px;
+  padding:4px 10px;display:inline-flex;align-items:center;gap:6px;
+}
+button.tgl:hover{border-color:var(--run);color:var(--fg)}
+button.tgl::before{content:"◐";color:var(--run)}
+
+/* ---------------- 状态标（三重编码：色 + 字形 + 中文） ---------------- */
+.pill{
+  display:inline-flex;align-items:center;gap:5px;
+  border-radius:999px;padding:2px 9px 2px 7px;
+  font-size:11.5px;font-weight:600;color:var(--fg);
+  border:1px solid transparent;white-space:nowrap;
+}
+.pill::before{content:"";width:7px;height:7px;border-radius:50%;flex:0 0 auto}
+.pill .g{font-size:10.5px;color:var(--fg-2);font-weight:700;line-height:1}
+.p-ok{background:var(--ok-bg)}      .p-ok::before{background:var(--ok)}
+.p-pend{background:var(--pend-bg)}  .p-pend::before{background:var(--pend)}
+.p-run{background:var(--run-bg)}    .p-run::before{background:var(--run)}
+.p-block{background:var(--block-bg)}.p-block::before{background:var(--block)}
+.p-idle{background:var(--idle-bg)}  .p-idle::before{background:var(--idle)}
+.legend{display:flex;flex-wrap:wrap;gap:6px}
+
+/* ---------------- 分区标题 ---------------- */
+.sec{margin-top:26px}
+.sh{
+  display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:11px;
+}
+.sh h2{margin:0;font-size:14px;font-weight:650;letter-spacing:.01em}
+.sh .n{
+  font-family:var(--mono);font-size:10.5px;font-weight:600;color:var(--fg-3);
+  border:1px solid var(--line-2);border-radius:4px;padding:1px 5px;letter-spacing:.06em;
+}
+.sh .note{margin-left:auto;font-size:11.5px;color:var(--fg-3)}
+
+/* ---------------- KPI 大数 ---------------- */
+/* auto-fit：加减 KPI 不必再动栅格。当前 6 枚时与旧版 repeat(6,1fr) 同宽（空轨会塌）。 */
+.kpis{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(158px,1fr))}
+.kpi{
+  position:relative;overflow:hidden;
+  background:var(--panel);border:1px solid var(--line);border-radius:10px;
+  padding:13px 14px 12px;box-shadow:var(--shadow);
+  display:flex;flex-direction:column;gap:5px;min-width:0;
+}
+/* 状态靠一根 2px 顶线承载，数字本身用文字墨色，不用系列色 */
+.kpi::before{content:"";position:absolute;top:0;left:0;right:0;height:2px;background:var(--line-2)}
+.kpi[data-s="ok"]::before{background:var(--ok)}
+.kpi[data-s="pend"]::before{background:var(--pend)}
+.kpi[data-s="block"]::before{background:var(--block)}
+.kpi[data-s="idle"]::before{background:var(--idle)}
+.kpi .kh{
+  display:flex;align-items:center;gap:6px;
+  font-size:11.5px;font-weight:600;color:var(--fg-2);letter-spacing:.02em;
+}
+.kpi .kh .g{font-size:10.5px;font-weight:700;line-height:1}
+.kpi[data-s="ok"] .kh .g{color:var(--ok)}
+.kpi[data-s="pend"] .kh .g{color:var(--pend)}
+.kpi[data-s="block"] .kh .g{color:var(--block)}
+.kpi[data-s="idle"] .kh .g{color:var(--idle)}
+.kpi .kv{
+  font-family:var(--mono);font-weight:700;color:var(--fg);
+  font-size:clamp(28px,5.4vw,38px);line-height:1;letter-spacing:-.03em;
+  font-variant-numeric:tabular-nums;display:flex;align-items:baseline;gap:2px;
+}
+.kpi .kv .u{font-size:14px;font-weight:500;color:var(--fg-3);letter-spacing:0}
+.kpi .kf{font-size:11px;color:var(--fg-3);line-height:1.4}
+/* 脚注一律走墨色：状态色是给标记用的（顶部色条 + .kh 的点/字形/中文名），
+   句子里的字再上色就变成"只有颜色表意"，也违反"文字穿文字色" */
+
+/* ---------------- 环 + 泳道条 ---------------- */
+.band{display:grid;gap:12px;grid-template-columns:1fr}
+@media (min-width:860px){ .band{grid-template-columns:274px 1fr} }
+.card{
+  background:var(--panel);border:1px solid var(--line);border-radius:10px;
+  padding:14px 16px;box-shadow:var(--shadow);min-width:0;
+}
+.gauge{display:flex;flex-direction:column;align-items:center;gap:10px}
+.gauge .gt{font-size:11.5px;font-weight:600;color:var(--fg-2);letter-spacing:.02em;align-self:flex-start}
+.ringwrap{position:relative;width:180px;height:180px;flex:0 0 auto}
+.ringwrap svg{display:block;width:100%;height:100%}
+.rg-track{fill:none;stroke:var(--track);stroke-width:11}
+.rg-arc{fill:none;stroke:var(--ok);stroke-width:11;stroke-linecap:round}
+.ringc{
+  position:absolute;inset:0;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:2px;pointer-events:none;
+}
+.ringc .rv{
+  font-family:var(--mono);font-weight:700;font-size:34px;line-height:1;
+  letter-spacing:-.03em;font-variant-numeric:tabular-nums;color:var(--fg);
+}
+.ringc .rl{font-size:11.5px;color:var(--fg-3);font-variant-numeric:tabular-nums}
+.gauge .gleg{display:flex;gap:12px;flex-wrap:wrap;font-size:11.5px;color:var(--fg-2)}
+.gauge .gleg b{font-family:var(--mono);color:var(--fg);font-weight:600}
+
+.lanes{display:flex;flex-direction:column;gap:11px}
+/* 三列一律用命名区域摆位，不靠自动排布 —— bar 是显式列，自动游标会错行 */
+.lane{
+  display:grid;gap:5px 14px;min-width:0;align-items:baseline;
+  grid-template-columns:1fr auto;
+  grid-template-areas:"t p" "b b";
+}
+@media (min-width:700px){
+  .lane{grid-template-columns:186px 1fr 76px;grid-template-areas:"t b p";align-items:center}
+}
+.lane .lt{grid-area:t;display:flex;align-items:baseline;gap:8px;min-width:0;overflow:hidden}
+/* nm 不许断：fe-learn / fe-game 会被 flex 压到 min-content 从连字符处折成两行，
+   整行高度跟着变，几条泳道条就对不齐了。角色名永远完整，说明文字让位截断 */
+.lane .nm{font-family:var(--mono);font-size:12.5px;font-weight:600;white-space:nowrap;flex:0 0 auto}
+.lane .who{font-size:11px;color:var(--fg-3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* 类名 tk —— 别用 .bar：顶栏已经占了 .bar，轨道会继承它的 padding/border，
+   于是 height:8px 被 border-box 夹到 26px，.fill 的 100% 又按 0 高内容盒解析 ⇒ 进度条永远不显示 */
+.lanes .tk{grid-area:b;height:8px;border-radius:4px;background:var(--track);overflow:hidden}
+.lanes .tk > .fill{display:block;height:100%;background:var(--ok);border-radius:4px}
+.lanes .tk > .fill.z{background:var(--line-2)}
+.lane .pv{
+  grid-area:p;
+  font-family:var(--mono);font-size:12px;font-weight:600;color:var(--fg-2);
+  font-variant-numeric:tabular-nums;
+}
+@media (min-width:700px){ .lane .pv{text-align:right} }
+.lane .pv .sm{color:var(--fg-3);font-weight:500}
+.lanes .tot{
+  margin-top:3px;padding-top:11px;border-top:1px solid var(--line);
+  display:grid;gap:5px 14px;align-items:baseline;
+  grid-template-columns:1fr auto;
+  grid-template-areas:"lb p" "b b";
+}
+@media (min-width:700px){
+  .lanes .tot{grid-template-columns:186px 1fr 76px;grid-template-areas:"lb b p";align-items:center}
+}
+.lanes .tot .lb{grid-area:lb;font-size:11.5px;font-weight:600;color:var(--fg-2)}
+
+/* ---------------- 单元矩阵 ---------------- */
+.mx{display:flex;flex-wrap:wrap;gap:14px 18px;align-items:flex-start}
+.gr{display:flex;flex-direction:column;gap:6px}
+.gr .gl{
+  font-family:var(--mono);font-size:10.5px;font-weight:600;color:var(--fg-3);
+  letter-spacing:.06em;text-transform:uppercase;
+}
+.gr .cells{display:flex;gap:5px;flex-wrap:wrap}
+.cell{
+  width:42px;height:38px;border-radius:7px;border:1px solid var(--line);
+  background:var(--panel);display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:0;
+  font-family:var(--mono);font-size:11px;font-weight:600;color:var(--fg);
+  text-decoration:none;position:relative;
+}
+.cell .cg{font-size:10px;line-height:1;font-weight:700}
+.cell[data-s="ok"]{background:var(--ok-bg);border-color:var(--ok);color:var(--fg)}
+.cell[data-s="ok"] .cg{color:var(--ok)}
+.cell[data-s="pend"]{background:var(--pend-bg);border-color:var(--pend);color:var(--fg)}
+.cell[data-s="pend"] .cg{color:var(--pend)}
+.cell[data-s="run"]{background:var(--run-bg);border-color:var(--run)}
+.cell[data-s="run"] .cg{color:var(--run)}
+.cell[data-s="block"]{background:var(--block-bg);border-color:var(--block)}
+.cell[data-s="block"] .cg{color:var(--block)}
+.cell[data-s="idle"]{background:var(--idle-bg);border-color:var(--line-2)}
+.cell[data-s="idle"] .cg{color:var(--idle)}
+.cell:hover{outline:2px solid var(--fg-3);outline-offset:1px}
+
+/* ---------------- 四拍 ---------------- */
+.beats{display:grid;gap:10px;grid-template-columns:1fr}
+@media (min-width:720px){ .beats{grid-template-columns:repeat(4,1fr)} }
+.beat{
+  background:var(--panel);border:1px solid var(--line);border-radius:10px;
+  padding:12px 14px;display:flex;gap:11px;align-items:flex-start;min-width:0;
+}
+.beat .bi{
+  flex:0 0 auto;width:26px;height:26px;border-radius:50%;display:grid;place-items:center;
+  font-family:var(--mono);font-size:12px;font-weight:700;
+  background:var(--panel-2);border:1px solid var(--line-2);color:var(--fg-3);
+}
+.beat .bt{display:flex;flex-direction:column;gap:2px;min-width:0}
+.beat .bn{font-size:13px;font-weight:650;color:var(--fg-2)}
+.beat .bd{font-size:11px;color:var(--fg-3)}
+.beat .bs{font-size:11px;font-weight:700;letter-spacing:.04em}
+.beat.done{border-color:var(--line-2)}
+.beat.done .bi{border-color:var(--ok);color:var(--ok);background:var(--ok-bg)}
+.beat.done .bs{color:var(--ok)}
+.beat.now{border-color:var(--run);box-shadow:var(--glow)}
+.beat.now .bi{background:var(--run-bg);border-color:var(--run);color:var(--run)}
+.beat.now .bn{color:var(--fg)}
+.beat.now .bs{color:var(--run)}
+
+/* ---------------- 单元明细 ---------------- */
+.ugrid{display:grid;gap:10px;grid-template-columns:1fr}
+@media (min-width:820px){ .ugrid{grid-template-columns:repeat(2,1fr)} }
+@media (min-width:1160px){ .ugrid{grid-template-columns:repeat(3,1fr)} }
+.unit{
+  background:var(--panel);border:1px solid var(--line);border-radius:10px;
+  padding:11px 13px 12px;display:flex;flex-direction:column;gap:7px;min-width:0;
+  scroll-margin-top:20px;
+}
+.unit.done{border-color:var(--ok)}
+.ut{display:flex;align-items:center;gap:8px;min-width:0}
+.uid{
+  font-family:var(--mono);font-size:11.5px;font-weight:700;color:var(--fg);
+  background:var(--panel-2);border:1px solid var(--line);border-radius:5px;padding:1px 6px;
+  flex:0 0 auto;
+}
+.uname{
+  font-size:13.5px;font-weight:650;letter-spacing:-.005em;min-width:0;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.ut .pill{margin-left:auto;flex:0 0 auto}
+.um{font-family:var(--mono);font-size:10.5px;color:var(--fg-3);letter-spacing:.04em}
+.ua{
+  font-size:11.5px;line-height:1.5;color:var(--fg-2);
+  border-top:1px dashed var(--line);padding-top:7px;
+}
+.ua b{color:var(--fg);font-weight:600}
+.ue{
+  display:flex;align-items:center;gap:7px;font-size:11px;color:var(--fg-3);flex-wrap:wrap;
+}
+.ue .k{
+  font-size:10px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--fg-3);flex:0 0 auto;
+}
+.ue .none{font-style:italic}
+.ue .pass{color:var(--ok);font-weight:600}
+.ue .self{color:var(--pend);font-weight:600}
+.ue a{color:var(--run);text-decoration:none;font-family:var(--mono);font-size:11px}
+.ue a:hover{text-decoration:underline}
+
+/* ---------------- 已了结 ---------------- */
+.closed{display:grid;gap:10px;grid-template-columns:1fr}
+@media (min-width:860px){ .closed{grid-template-columns:1fr 1fr} }
+/* 待裁决区永远置顶，一条也占满整行 —— 它不必和别人并排，权重比「已了结」高 */
+.closed.wide{grid-template-columns:1fr}
+.cd{
+  background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--ok);
+  border-radius:10px;padding:11px 14px;display:flex;flex-direction:column;gap:6px;min-width:0;
+}
+.cd .ct{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.cd .cn{font-family:var(--mono);font-size:10.5px;font-weight:700;color:var(--fg-3);
+  border:1px solid var(--line-2);border-radius:4px;padding:1px 5px}
+.cd .cq{font-size:10.5px;font-weight:700;letter-spacing:.05em;color:var(--ok);background:var(--ok-bg);
+  border-radius:4px;padding:1px 7px}
+/* 待裁决态：左边条与标签转琥珀色，和「已了结」的绿一眼分开 */
+.cd.wait{border-left-color:var(--pend)}
+.cd.wait .cq{color:var(--pend);background:var(--pend-bg)}
+.cd h3{margin:0;font-size:13px;font-weight:650}
+.cd .cs{font-size:11.5px;color:var(--fg-3);line-height:1.5}
+.cd .cs b{color:var(--fg-2);font-weight:600}
+.cd details{margin:0;border:0;background:none;box-shadow:none}
+.cd summary{padding:4px 0 0;font-size:11px;color:var(--fg-3);font-weight:600}
+.cd .body{padding:6px 0 0;border-top:1px solid var(--line);margin-top:5px}
+.cd .body ul{margin:4px 0 0;padding-left:16px;font-size:11.5px;color:var(--fg-2);
+  display:flex;flex-direction:column;gap:3px}
+
+/* ---------------- 附录 ---------------- */
+details.fold{
+  background:var(--panel);border:1px solid var(--line);border-radius:10px;
+  box-shadow:var(--shadow);margin-top:9px;
+}
+details.fold summary{
+  cursor:pointer;padding:11px 15px;font-size:12.5px;font-weight:600;
+  list-style:none;display:flex;align-items:center;gap:9px;
+}
+details.fold summary::-webkit-details-marker{display:none}
+details.fold summary::before{content:"▸";color:var(--fg-3);font-size:11px;transition:transform .15s ease}
+details.fold[open] summary::before{transform:rotate(90deg)}
+details.fold .body{padding:0 15px 14px;border-top:1px solid var(--line)}
+details.fold .body p{margin:11px 0 0;font-size:12px;color:var(--fg-2);max-width:80ch}
+details.fold .body ul{margin:9px 0 0;padding-left:17px;font-size:12px;color:var(--fg-2);
+  display:flex;flex-direction:column;gap:4px}
+details.fold .body li::marker{color:var(--fg-3)}
+
+/* ---------------- footer ---------------- */
+footer{margin-top:26px;padding-top:16px;border-top:1px solid var(--line);font-size:11.5px;color:var(--fg-3)}
+.chain{display:flex;align-items:center;gap:8px;flex-wrap:wrap;color:var(--fg-2);margin-bottom:8px}
+.chain b{font-weight:600;color:var(--fg)}
+.chain .bx{border:1px solid var(--line);background:var(--panel);border-radius:5px;padding:2px 8px;font-size:11px}
+.chain .bx.here{border-color:var(--run);color:var(--run);font-weight:600}
+.chain .ar{color:var(--fg-3)}
+footer p{margin:0;max-width:80ch;line-height:1.6}
+</style>
+<script>
+// 主题：默认深色，用户切过就记住（读不到 localStorage 也不影响渲染）
+try{
+  var t = localStorage.getItem('hd-progress-theme');
+  if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t;
+}catch(e){}
+</script>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- ===================== 顶栏 ===================== -->
+  <header class="bar">
+    <div class="id">
+      <span class="kicker">汉语搭子 · 多智能体并行开发</span>
+      <h1>开发进度大屏</h1>
+    </div>
+    <span class="sp"></span>
+    <div class="meta">
+      <span class="chip">Day <b>2</b></span>
+      <span class="chip">起点 <b>11-23</b></span>
+      <span class="chip">最后同步 <b>11-24 19:15</b></span>
+      <span class="chip">当前第 <b>4</b> 拍</span>
+      <button class="tgl" id="tgl" type="button" aria-label="切换深浅色">浅色</button>
+    </div>
+  </header>
+
+  <!-- ===================== 待裁决（永远置顶） ===================== -->
+  <section class="sec">
+    <div class="sh">
+      <h2>待裁决</h2>
+      <span class="note">需要人拍板的事（<b>CR-01 已于 19:1x 结案 —— 现为 0 条</b>，留档在下；<b>新增一条只需你在 DNS 后台点一下</b>：给 <code>hanyu.zj17z.cn</code> 加 A 记录 → <code>114.132.232.60</code>，否则域名不可用）· 已结案的 GV-01／GV-02 留档在下 · <b>GV-03</b>（契约口径澄清）／<b>GV-04</b>（活页单写纪律）均<b>无需你拍板</b>，编排者已按上位规则结案 · 按 §十二·七 永远置顶</span>
+    </div>
+    <div class="closed wide">
+
+      <div class="cd">
+        <div class="ct">
+          <span class="cn">CR-01</span>
+          <span class="cq">已结案 11-24 19:1x · 用户已批「修 CR-01」 · 已修 · 已验（作者自证） · 已部署</span>
+        </div>
+        <h3>打卡之后补一次印章结算 —— <b>已修</b>（落点 = <code>services/checkin.ts</code> 的 <code>touch()</code> 尾），探针退出码 <b>1 → 0</b>；<b>但非作者重钉欠着、域名 DNS 未配</b></h3>
+        <div class="cs"><b>✅ 已结案（11-24 19:1x，用户批「修 CR-01，然后进部署波」）</b>：落点 = <code>services/checkin.ts</code> 的 <code>touch()</code> 尾一行 <code>await evaluateStamps(userId);</code>，探针退出码 <b>1 → 0</b>，后端四件产物与 H5 已上线。<b>两条欠账须与「修好了」一并读</b>：① <b>无</b>非作者签字（本机此刻无其它会话在册 ⇒ 锚暂时是断的）；② <b>域名 <code>hanyu.zj17z.cn</code> = NXDOMAIN</b>，只上了 HTTP。展开可见 <b>18 条</b>结案读数。<br><br>四类章里<b>只有 streak 的判定源会倒退</b>：<code>lesson_progress.status</code> 完成后不回退、<code>attempts</code> 只增、<code>totalXp</code> 只增，唯独断签后 <code>current_streak</code> 归 1。契约只在 <code>POST /attempts</code> 与 <code>POST /lessons/:id/finish</code> 结算印章，<b>打卡写路径 <code>POST /checkin</code> 不结算</b> —— 而打卡恰恰是唯一会把连击推过阈值的动作。于是「连续 3 天只打卡」的用户，第 3 天那一刻无人结算；等第 4 天断签后再结算，<code>current_streak</code> 已归 1，这枚章<b>永久发不出去</b>。</div>
+        <details>
+          <summary>复现读数 · 建议改法 · 归属 · 验收脚本 · <b>结案读数与两条欠账（19:1x 新增）</b></summary>
+          <div class="body">
+            <ul>
+              <li><b>已在隔离库复现</b>（一次性库，不碰共用库）：A/B 是同一用户、同一个库的<b>单变量对照</b>，唯一差别是 A 之后<b>有没有</b>多跑一次 <code>evaluate()</code> —— A 拿不到、B 立刻拿到 <code>streak-3</code>。缺的<b>只是那句结算</b>，判定规则本身没问题。</li>
+              <li><b>C 是缺陷的最重形态</b>：曾连过 3 天但当时无人结算，之后断签再打卡，<code>touch()</code> 把连击打回 1（<code>max_streak</code> 里明明记着 3），此后再怎么 <code>evaluate()</code> 也<b>永久拿不到</b>。</li>
+              <li><b>症状是无形的</b>：接口 200、日志干净、页面只是灰着 —— 没有任何运行时报错能抓到它。</li>
+              <li><b>建议最小改法（11:5x 落点已改定）</b>：补一次 <code>await evaluateStamps(userId)</code>。<b>⚠️ 落点必须落在 <code>services/checkin.ts</code> 的 <code>touch()</code> 尾，不能落在 <code>routes/checkin.ts</code></b> —— 理由是一条<b>可核的</b>事实：§4.7 指定的验收脚本 <code>scripts/check-streak-timing.ts</code> <b>不经过 Express</b>（<code>:24</code> 直接 <code>import { touch } from '../src/services/checkin'</code>、<code>:25</code> 直接 <code>import { evaluate }</code>、<code>:77</code> <code>const ra = await touch(a, null);</code>，行尾注释即「<code>POST /checkin</code> 的全部副作用就是这一行」）⇒ <b>修在路由层，脚本照样退出码 1，这一条会变成「修了也红、永远关不掉」</b>；修在 <code>touch()</code> 内则现成脚本直接转绿。项目里已有同形先例：<code>services/attempt.ts:140</code> <b>就在 service 内</b>结算印章（<code>routes/attempts.ts:178</code> 又调一次，幂等无害）。<b>不改 §4.7 的判定规则</b>，只是把结算搬到写路径上。<span class="self">（这条落点判据由非作者 <code>ba</code> 提出，编排者已逐行复核原文）</span></li>
+              <li><b>归属与落点（编排者 11:5x 定）</b>：<code>src/routes/checkin.ts</code> 在 fe-game 写集，<code>src/services/checkin.ts</code> 在 be-api 写集；两条路都自洽，但<b>只有后者能让 §4.7 的现成验收凭据存活</b> ⇒ <b>落点 = <code>services/checkin.ts</code> 的 <code>touch()</code>（be-api 写集）</b>。由此<b>非作者池反而更大</b>：<code>ba</code>／<code>57</code>／<code>4e</code>／<code>bd</code> <b>四个都够格</b>（<code>ba</code> 的写集是 <code>routes/{xp,checkin,duel,team}.ts</code>，不含该 service）—— 不会再出现「唯一够格的非作者恰好是落点作者」那种死结。<b>本卡仍待你拍板「修不修」</b>；落点只是把「修了怎么验」这件事提前钉死。</li>
+              <li><b>⚠️ 「修」不是无副作用的小改 —— 它会动 be-api 那 13 件哈希表里的一件</b>（14:2x <code>ba</code> 提请注意，我复算确认）：落点 <code>server/src/services/checkin.ts</code> <b>正在 be-api 半 B 的 13 件表内</b>（现 4544 B ／ md5 <code>7cd731e39c9432441fc5b10d67dee057</code> ／ mtime 16:53:53.1867605）⇒ <b>判「修」那天，该行即作废，13 件表变成「13 件中有 1 件换值」</b>。那张表是「验收对象 = 部署对象是同一批字节」的锚，改完<b>必须由非作者重钉该件新 md5</b>，否则锚断。<br><b>✅ 19:1x 兑现读数</b>：该行<b>已如实作废</b>，13 件表变成「13 件中有 1 件换值」—— 新三件套 <b>7018 B ／ md5 <code>74b4e33a85444ddbdb322080fc9bbbb3</code> ／ mtime 2026-11-24 19:00:04.964985000 +0800</b>；<b>计数与穷尽划分 12 / 13 / 9 = 34 一律不变</b>（半 B 的定义是「与 <code>028de6a</code> 有差异或新增」，改前改后都满足），只有那一格的哈希换值 —— 正是本行的预告。但本行最后那句「<b>必须由非作者重钉</b>」<b>尚未兑现</b>：19:1x 取 <code>ListAgents</code> = 「No reachable agents」⇒ 本机此刻无非作者在册，我<b>不代签</b> ⇒ <b>这枚锚暂时是断的</b>，欠账记在下方「结案读数与两条欠账」。</li>
+              <li><b>验收脚本</b>：<code>npx tsx scripts/check-streak-timing.ts</code>（隔离库）—— <b>落点若在 <code>touch()</code> 内</b>，A 场景修好后自动转绿、<b>退出码 1 → 0</b>（脚本 <code>:21</code> 的约定就是「缺陷仍在 → 1；已修 → 0」）。证据：<a href="evidence/content-streak-timing.txt">evidence/content-streak-timing.txt</a></li>
+              <li><b>308 时点复跑（11:5x，非作者 <code>ba</code>，代码一字未动）</b>：隔离库 <code>%TEMP%\hd-vfy\streak308.db</code>，<code>MIG_EXIT=0</code>／<code>IMP_EXIT=0</code>／<b><code>PROBE_EXIT=1</code></b> —— A FAIL、C 永久不可达，与 296 时点的 <code>evidence/content-streak-timing.txt</code> <b>逐字同一结论</b>（语料扩容不影响本条）。记档于 <a href="evidence/fe-game-c1c4-nonauthor.txt">evidence/fe-game-c1c4-nonauthor.txt</a> §九／§十。</li>
+              <li><b>⚠️ 最小改法只修 A、不修 C（已知残留，须与「修好了」一并读）</b>：补跑 <code>evaluate()</code> 救不回<b>已经错过窗口</b>的人 —— <code>services/stamps.ts</code> 的 <code>case 'streak'</code> 判定源是会倒退的 <code>current_streak</code>；要覆盖 C 得把判定源改成 <code>max_streak</code>，那是<b>改 §4.7 的判定规则</b>，超出本轮授权面。<b>当前未上线部署</b>（共用库里只有开发账号），不存在「上线后被漏掉章的用户」⇒ <b>最小改法够用，C 留作已知残留</b>。</li>
+              <li><b>不必扩大改动面</b>：<code>unit</code> / <code>stroke</code> / <code>xp</code> 三类章的判定源只增或已完成不回退，迟结算只是「晚点拿到」、不会「拿不到」—— 本条只涉及 streak。</li>
+              <li><b>✅ 结案（2026-11-24 19:1x，用户亲口批「修 CR-01，然后进部署波」）—— 落点照本卡预先钉死的那条落</b>：插入点 = <code>server/src/services/checkin.ts</code> 的 <code>touch()</code> 内、<code>grantXp()</code> 之后、<code>return</code> 之前，一句 <code>await evaluateStamps(userId);</code> ＋ 26 行注释（写明：为何落在 service 层而非 <code>routes/checkin.ts</code>、为何只走 <code>created</code> 支、为何位置在 <code>grantXp</code> 之后、<code>checkin ⇄ stamps</code> 循环引用为何安全、以及本条<b>不</b>修什么）。三件套 <b>4544 B / <code>7cd731e3…</code> / 16:53:53.1867605 → 7018 B / <code>74b4e33a85444ddbdb322080fc9bbbb3</code> / 19:00:04.964985000</b>（＋2474 B）。</li>
+              <li><b>六条验收读数 —— 全部是<u>作者自证</u>，按</b> <code>plan.html:927</code> <b>不算「已验收」</b>：① 修前基线 <code>check-streak-timing.ts</code> → <b>EXIT=1</b>、A ⚠ FAIL（先证明探针对该缺陷敏感）；② 修后同脚本同隔离库 → <b>EXIT=0</b>、A ✅ PASS、B 无新增解锁、C 仍永久不可达；③ <code>tsc --noEmit</code> 干净；④ 本地<b>走 Express 入口</b>端到端（专为证明循环引用无害）：新用户打卡 <code>{"created":true,"currentStreak":1,"xpEarned":5}</code>、同日复打 <code>created:false,xpEarned:0</code>、伪造连击=2 的用户打卡后 <code>currentStreak:3</code>，<b>紧接着不做任何其它动作</b> <code>GET /api/stamps</code> → <code>streak-3 = ✅已得</code>；⑤ 全新隔离库全量回归 <b>PASS=319 FAIL=0 SKIP=0</b>；⑥ <b>生产环境（114.132.232.60:8091）实测</b>：探针用户打卡前 <code>streak-3.earned=false</code> → <code>POST /checkin</code> → <code>{"created":true,"checkDate":"2026-11-24","currentStreak":3,"maxStreak":3,"xpEarned":5}</code> → <b>无缝</b>复读 <code>streak-3.earned=true</code>@<code>19:11:36</code>；清理后 <code>users</code>/<code>user_streaks</code>/<code>checkins</code>/<code>xp_events</code>/<code>user_achievements</code> 复读<b>全为 0</b>，<code>achievements=15</code> 种子未动。证书：<a href="evidence/cr01-checkin-fix-and-voided-pins.txt">evidence/cr01-checkin-fix-and-voided-pins.txt</a></li>
+              <li><b>部署四件产物逐字节相同（这一半是好消息）</b>：<code>dist/services/checkin.js</code> <code>6581 | 829cbd88f604d5de1b27b3231fdfa2a3</code>（<code>:111</code> 就是那句 <code>await (0, stamps_1.evaluate)(userId);</code>）、<code>dist/migrations/20261123160001_items_hint.js</code> <code>1082 | 3773bd5e…</code>、<code>dist/migrations/20261123170000_reports.js</code> <code>1447 | 13651ed2…</code>、<code>dist/index.js</code> <code>2152 | 680e83e3…</code> —— 本地与服务器 <b>md5 两两相同</b> ⇒ 修复确在<b>被部署的编译产物</b>里，不是「本地改了没传」。这条非做不可：部署脚本的 <code>npx tsc 2>&1 | tail -20</code> <b>会吃掉 tsc 的退出码</b>（管道返回的是 <code>tail</code> 的码），脚本自报的「编译成功」证明不了编译成功。</li>
+              <li><b>H5 是真重打的，旧 dist 陷阱已避开</b>：<code>mobile/dist/build/h5/</code> <b>38 个文件</b>全目录指纹两侧同为 <code>0799c11fa50ca283b469834a6d116790</code>，<code>index.html</code> 两侧同为 <b>851 B / 19:05:46.370574800</b>；源码最后改动 10:31–10:54 早于产物 19:05:46 ⇒ 这份产物在时间上<b>包含</b>了那批改动，与第 1095–1096 行那条「产物早于源码 12 分钟」的旧账已结清。<span class="self">（坑：Git Bash <code>md5sum</code> 打二进制模式 <code>&lt;hash&gt; *file</code>、GNU 打文本模式 <code>&lt;hash&gt;  file</code>，只 <code>sed</code> 路径会留下那个 <code>*</code> 而误报两侧不同；取哈希列 + 归一化相对路径 + <code>LC_ALL=C sort</code> 后才可比。）</span></li>
+              <li><b>⚠️ 但对这一件而言，<u>验收对象 ≠ 部署对象</u>（不许含糊）</b>：be-api 验收波（11:0x–11:20）跑断言时该文件是 <code>7cd731e3…</code> 那批，B1–B6 与 L/G 十一格的签字签的是<b>含该版本</b>的整棵树；部署上去的是 <code>74b4e33a…</code> 那批 ⇒ <b>这一件</b>的「被验收代码」与「线上代码」不是同一份字节。这不是失误、也不是「验收无效」，而是「<b>13 件表里有 1 件换了值，那枚锚要由非作者重钉一次</b>」；其余 33 件（半 A 12 ＋ 半 B 其余 12 ＋ 边界 9）一字未动。作废读数逐条：<code>be-api-lane-pins.txt</code> 的 <b>§二第 79 行</b>（该行整行）与 <b>§三「结论一」整节</b>（含「be-api 泳道在 Day 2 零写入」与由它推出的「验收对象 = 部署对象是同一批字节」）；<b>不作废</b> §四的 <b>12 / 13 / 9 = 34</b>。该件按自己 §七「只增不删」，我<b>不动它一个字节</b>，作废声明只记在我的证书里。</li>
+              <li><b>🔴 欠账一条 · 本波没有非作者签字</b>：这张卡从头到尾的规矩是「<b>已验收</b>三个字只能由没写这段代码的人写，且要亲手跑过断言」。本波唯一在册会话就是我自己（<code>ListAgents</code> 19:1x = 「No reachable agents — no other Claude session is running on this machine right now」）⇒ <b>不存在够格的非作者</b>。所以：我<b>不代签</b>、也不把这六条读数写成「已验收」，只写「<b>作者自证</b>」⇒ <code>checkin.ts</code> 这枚锚<b>暂时是断的</b>，待有非作者会话在册时由它上盘复算 <code>74b4e33a…</code> 并落字。另注：本会话的自称名址是<b>随实例变的</b>（此刻 <code>hanyu-dazi-8e [5d8b1a]</code>，本页他处记的是 <code>hanyu-dazi-bd [66feaa]</code>）⇒ <b>「编排者」是职责，不是固定地址</b>。</li>
+              <li><b>残留（不许读成「全修好了」）</b>：探针 <b>C 场景</b>仍不可达 —— 判定源是会倒退的 <code>current_streak</code>，要覆盖 C 需改成 <code>max_streak</code>，那是<b>改契约 §4.7 的判定规则</b>，超出本次授权面。当前无人受害：本波人工复读生产库 <code>users = 0</code> ⇒ 不存在「上线后被漏掉章的真实用户」。</li>
+              <li><b>🔴 部署波的另一条诚实缺口：域名还不能用</b>。<code>hanyu.zj17z.cn</code> 解析 = <b>NXDOMAIN</b>（<code>nslookup hanyu.zj17z.cn 1.1.1.1</code> → Non-existent domain；父域 <code>zj17z.cn</code> → 114.132.232.60 正常）⇒ 本波 nginx 只上 <b>HTTP</b>（未加 <code>--certbot</code>），<code>https://hanyu.zj17z.cn/</code> 返回 <b>000</b> ⇒ <code>plan.html</code> §十二·六 的「必须 200」<b>本波不可达，原因在 DNS、不在部署</b>。用 <code>Host: hanyu.zj17z.cn</code> 头直连服务器可证路由本身正常（<b>200</b> 且回后端健康 JSON；同批 <code>zj17z</code> 200／<code>zj17z</code>·<code>demo</code> 301）。<b>需要你做的唯一一件事：给 <code>hanyu.zj17z.cn</code> 加一条 A 记录 → <code>114.132.232.60</code></b>，生效后跑 <code>python -I tools/deploy-hanyu.py --certbot</code> 补完 HTTPS。其余部署读数全绿：<code>DEPLOY_EXIT=0</code>、健康检查 <code>{"app":"hanyu-dazi","status":"up"}</code>、<code>LISTEN 127.0.0.1:8091</code>（只监听回环）、PM2 <code>online</code> 且 restarts <b>不再增长</b>、error.log 空；学校那套三进程 <b>pid 与 restarts 全程未变</b>（<code>smartcampus</code> 3032722/294、<code>smarcampus-demo</code> 2764961/2、<code>pm2-logrotate</code> 1292421/5），<code>zj17z.cn</code> 与 <code>demo.zj17z.cn</code> 外网仍 200。</li>
+            </ul>
+          </div>
+        </details>
+      </div>
+
+      <div class="cd">
+        <div class="ct">
+          <span class="cn">GV-01</span>
+          <span class="cq">已结案 11:02 · 两条泳道的签字人俱定 ；11:4x 更正：签名人<b>不是</b> <code>hanyu-dazi-ba</code> ；<b>11:5x 正面验明 = 在册会话 <code>hanyu-dazi-7d</code></b></span>
+        </div>
+        <h3><b>归属悬案已结：<code>bd</code> 与编排者是同一个会话</b> ⇒ 那三页就是 bd 写的；<b>L/G 由 be-api 签，且签的是 bd 的书</b></h3>
+        <div class="cs">我先前写「本会话里<b>不存在</b>没写这段代码的一方」，是因为<b>只盯着自己</b>，漏了另外两只。<b>够格的非作者一直有两个。</b>按 §5 写集一查就清楚：<code>hanyu-dazi-bd</code> 在 <code>server/src</code> <b>一行没写</b>；<code>hanyu-dazi-57</code>（fe-learn）写集全在 <code>mobile/src/**</code>，<code>server/src</code> 也一行没写。<b>B1–B6 已按此办结</b>；<b>L/G 则改由 be-api 签</b>（见下第一条）—— 因为那三页是 bd 写的，bd 自己没资格。</div>
+        <details>
+          <summary>结案依据 · 两条泳道的指派 · 三份独立证据 · 买到什么没买到什么</summary>
+          <div class="body">
+            <ul>
+              <li><b>✅ 11:02 结案 —— 悬案是两个名字指同一个会话</b>：<code>ListAgents</code> 实测，本会话的名址就是 <b><code>hanyu-dazi-bd [66feaa]</code></b>；而 <code>PLAN/round7-user-approved.md</code> 里自称「编排者直接改的」的那只手，就是本会话。<b>所以「bd 写的」与「编排者写的」不是两种说法，是同一种说法的两个名字</b> —— 先前判它「磁盘判不出来」是判重了，本会话的身份是自证的，不必靠 mtime。<b>四个产品文件（<code>learn.vue</code>／<code>duel.vue</code>／<code>wrongbook.vue</code>／<code>content.json</code>）全部归 bd。</b></li>
+              <li><b>✅ 由此得出的指派（两条泳道都已定）</b>：<b>B1–B6 → bd 已落字</b>（已办）。<b>L1–L5 / G1–G6 → 署名 <code>be-api</code> 的那一方</b>，它在 <code>server/src</code> 与 <code>mobile/src</code> 都是<b>零字节</b>，够格。<b>⚠️ 本条原文在这里把它写成「<code>be-api</code>（<code>hanyu-dazi-ba</code>）」——那个括号<u>已证伪</u>，见下一条的 11:4x 收敛结果。</b>bd 因为写过那三页，对 <b>L1/L3/L4/G5 不再是非作者</b>（不会去签），L2（<code>lesson.vue</code>）／L5（<code>stroke.vue</code>）／G1–G4／G6 它没碰，仍够格 —— 但<b>不必启用这个后备</b>。</li>
+              <li><b>⚠️ 11:3x 新增一条待核 → <u>11:4x 已核，结果见本条末</u>（关于这条指派的前提）</b>：上面那句「<code>be-api</code>（<code>hanyu-dazi-ba</code>）……在 <code>mobile/src</code> 零字节」有<b>两处记录互相打架</b>：<br>&nbsp;&nbsp;·&nbsp;<code>evidence/be-api-accept-bd-signature.txt:76</code> 写「本泳道作者 = be-api（<b>会话 hanyu-dazi-ba</b>）」；<code>evidence/be-api-accept-LG.txt:2</code> 写「出证人／签字人：<b>be-api（本会话）</b>」。<br>&nbsp;&nbsp;·&nbsp;而 <code>evidence/fe-game-nonauthor-review.txt:26</code>（同一名号 <code>hanyu-dazi-ba</code> 的会话自己写的）写「ListAgents 把本会话登记为 <code>hanyu-dazi-ba</code>，<b>与本路实际写集不符</b>」，且该文件 §1 自称「本路 §5 独占写集 = <code>mobile/src/pages/{profile,rank,stamp,duel,team,user}/**</code>……<b>本路就是 G1–G6 的作者</b>」。<br>&nbsp;&nbsp;⇒ 若两者是<b>同一个物理会话</b>，则签 G1–G6 的那只手就是写 G1–G6 的那只手，按 §十二·七 <b>G1–G6 不成立</b>；若<b>不是</b>，则只是名号撞车、签字有效。<b>本轮没有第三份记录能判定，故一律按「资格待核」记，不擅自判它有效或无效。</b>L1–L5 不受此疑影响（该会话自己声明与 L 产品面不相交，且它确实跑过 lg／l5 两段）。<br>&nbsp;&nbsp;<b>⇒ 11:4x 逐会话直接问证，本条已收敛（证词原文：<a href="evidence/signer-identity-rollcall.txt">evidence/signer-identity-rollcall.txt</a>）</b>：<br>&nbsp;&nbsp;① <b>「<code>be-api</code>」在 <code>ListAgents</code> 里不存在</b> —— 在册的 4 个会话是 <code>57</code>／<code>7d</code>／<code>ba</code>／<code>4e</code>，<b>没有一个叫 <code>be-api</code></b>。所以它是<b>文件内的自署名</b>，不是名址，<b>不能拿名址反查它的身份</b>；上面那个「（<code>hanyu-dazi-ba</code>）」的括号<b>写错了，就此去掉</b>。<br>&nbsp;&nbsp;② <b><code>ba</code> 直接否认</b>写过 <code>be-api-accept-LG.txt</code>，原话「我的写盘记录里没有这个文件，我只是<b>读</b>过它」；它声明自己写的是 <code>fe-game-nonauthor-review.txt</code>。<b>⇒ 「签字人 ＝ G 的作者」这个最坏的可能被当事方亲手排除</b>，<b>G1–G6 那六格的资格疑点实质消解</b>（G 写集按 §5 只有 fe-game 一家，而 G 的作者自认没落那六个字）。<br>&nbsp;&nbsp;③ <b><code>4e</code>（content）同样否认</b>参与那两份 <code>be-api-*</code> 文件。<br>&nbsp;&nbsp;④ <b>L1–L5 五格 —— 11:5x 已闭（与 G 同档）</b>：11:5x 已<b>正面验明</b>署名 <code>be-api</code> 的一方 = 在册会话 <code>hanyu-dazi-7d [810033]</code>，其写集 = §5 后端，与 L 的作者 <b>fe-learn</b> <b>不相交</b> ⇒ 「签那五格的就是 L 的作者」被<b>名址与写集共同排除</b>，不必再靠 fe-learn 口供（那条只是旁证，不作主据）。<br>&nbsp;&nbsp;<b>④·补 —— 验明的四条可核痕迹（我逐项复核，全部对上）</b>：① <code>%TEMP%\hd-vfy\web.ledger.bd-1055.json</code> = 167944 B @ <b>11:14:57</b>（恰在其自陈起跑 11:15:02 <b>前 5 秒</b>）；② v1 量具快照 <code>web.cjs.snapshot-1112</code> = 73536 B／<code>081e1700…</code> @ 11:14:57（正是八段所用那版）；③ v2 量具 <code>web.cjs</code> = 75197 B／<code>5b21c662…</code> @ <b>11:29:57</b>（与 <code>be-api-accept-LG.txt</code> §七 的换版记录<b>逐字节</b>相同）；④ <code>web.ledger.json</code> 覆写于 11:31:00，共用库 md5 <code>554ac814…</code> <b>未变</b>，八段读数与 LG.txt §三 <b>逐字相同</b>；另有 <code>ba</code> 独立旁证的 PID 39508 @ 11:15:02。<b>⚠️ 残余的诚实成分只有一条：名址是它自陈</b>（磁盘证得了「那个时点有人跑了那本尺」，证不了「跑的人就是那个名字」）；资格的那条<b>硬</b>根据是<b>写集不相交</b>。<br>&nbsp;&nbsp;⑤ <b>「be-api 是一个独立进程」目前只有一条旁证，且当事方自己说它不是证明</b>：11:15:02 起有一个 <code>ba</code> <b>没有启动</b>的 <b>PID 39508</b> 跑了八阶段扫描（共用同一个 8124 后端），它为让路<b>自愿 TaskStop 掉了自己那一遍 l5</b>。它划的边界是原话：「我不能从内部证明自称 be-api 的会话与我不是同一进程身份 —— 上面那条 TaskStop 是我能拿到的最强旁证，<b>不是证明</b>。」<br>&nbsp;&nbsp;<b>⇒ 结论（11:5x 更新，取代原句）：十一格的签字人 = 在册会话 <code>hanyu-dazi-7d [810033]</code>，写集与 L／G 的作者<b>均不相交</b> ⇒ 资格成立；原先「G1–G6 已消解、L1–L5 待核」的<b>不对称就此抹平</b>。残余只有一条自陈成分（名址由它自己报）。十一格的状态词一个字都没动。</b></li>
+              <li><b>⭐ 这一手的分离度比 B1–B6 那次更强</b>：本卡片下面「没买到什么」那条担忧（「L/G 的判据 <code>hd-accbr.cjs</code> 也是 be-api 写的 ⇒ 等于自审」）<b>被一个更好的组合解决了</b> —— 让 be-api 去跑 <b>bd 写的 <code>%TEMP%\hd-vfy\web.cjs</code></b>（<code>lg</code> + <code>g1..g6</code> 两段）。这样<b>写产品代码的、写判据的、落状态词的是三个不同的人</b>：判据作者的代码由非作者跑，签字人自己一行产品代码没写、一行判据也没写。<b>⚠️ 这个「三个人」的前提是签名人确实不是 fe-learn —— <b>11:5x 已正面验明签名人 = <code>hanyu-dazi-7d [810033]</code></b>（写集 = 后端，与 L／G 作者均不相交），前提成立。</b>B1–B6 那次做不到（判据与签字人是同一个 bd）。</li>
+              <li><b>B1–B6 的三份独立证据</b>（都是 <code>PASS=319 FAIL=0 SKIP=0</code>）：bd 自跑 <code>be.out.txt</code>（07:28，夹具 <code>fx</code>／8123）；fe-learn 轮 1 用 <code>be.cjs</code> <b>原版未改一字</b>在重建夹具 <code>fx-be2</code> 上跑（10:25）；fe-learn 轮 2 用逐字副本在 <code>fx3</code>／8126 上跑。归属是<b>核过的</b>，不是采信谁的说法：<code>server8123b.log</code> 首行 10:25:49 指向 <code>fx-be2</code>，<code>server8126.log</code> 首行 10:27:26 指向 <code>fx3</code>。</li>
+              <li><b>买到了什么</b>：fe-learn 那两轮证明的是「<b>换人、换夹具、换端口，同一本断言书仍 319/319</b>」—— 满足 §十二·七 的「由没写这段代码的一方<b>亲手跑过</b>」。</li>
+              <li><b>没买到什么</b>：<b>不</b>证明判据本身对（判据出自 <code>be.cjs</code>，作者是 bd —— 那是写书人的账）。另：<code>be.cjs:478</code>（第 2 页条数）与 <code>:589</code>（recent 最多 20 条）在 6 行／4 条 recent 的夹具上没被逼到边界，只证明「不 500」，<b>不计入「已证明」</b>。</li>
+              <li><b>⚠️ 诚实附带（不许含糊）</b>：L/G 的<b>判据</b>（<code>hd-accbr.cjs</code>）也是 be-api 写的，而且 L4 与 G6 两节本路还改写过。所以即便最后由 be-api 签，那也是「<b>非作者签字，但判据出自签字人自己</b>」—— 独立性<b>弱于</b> B1–B6（B1–B6 的判据出自 bd，签字人另有其人）。要更强的分离，就得换一本别人写的书：bd 的 <code>hd-vfy/web.cjs</code>（lg 124/124 + l5 150/150 + g1–g6）。</li>
+              <li><b>上一版留的两条裁决（A 承认「方法独立」／B 另开会话）都不必走了。</b>在签字落笔<b>之前</b>，六格停在「待验收」是因为<b>还差签字人那一笔</b>，不是因为缺人 —— <b>那一笔已在 11:0x 落下</b>（见下一条）。完整记录见 <a href="evidence/be-api-accept-B1-B6.txt">evidence/be-api-accept-B1-B6.txt</a>。</li>
+              <li><b>✅ 11:0x 已落字</b>：<b>B1–B6 六格转「已验收」</b>。签字人 bd 在 <b>308 新基线</b>上重跑了自己的断言书（<code>be.cjs</code> 58618 B／<code>84c7a378…</code>；夹具 <code>fx-tone</code>／8123；<code>be-tone.out.txt</code>）—— <b>PASS=319 FAIL=0 SKIP=0</b>，含 40 个 listen 音频逐个 HTTP 200、游客不带 token 取 <code>/duels/:code</code> 为 code:0、<code>/users/:id</code> 恰好 9 字段、<code>reports</code> 表真写进去了。<b>这仍是「非作者签字、判据出自签字人自己」</b> —— 独立性弱于一次真正的第三方审书，这一点没变。记录见 <a href="evidence/be-api-accept-bd-signature.txt">evidence/be-api-accept-bd-signature.txt</a>（含「不许读成通过」的四条限定：判据对错未审、<code>:478</code>/<code>:589</code> 未逼到边界、<code>:81</code>/<code>:82</code> 是夹具派生基线、旧量具的 319 不可顶替）。</li>
+            </ul>
+          </div>
+        </details>
+      </div>
+
+      <div class="cd">
+        <div class="ct">
+          <span class="cn">GV-02</span>
+          <span class="cq">已结案 11:02 · 三问俱答 ；11:1x 更正：308 只重取了读数，状态词未重签</span>
+        </div>
+        <h3>冻结期里<b>四个</b>产品文件被改（<b>批准来源已核</b>）—— 旧读数不再描述当前工作树，<b>308 上的重取只到读数</b></h3>
+        <div class="cs">08:00 之后被改的是<b>四个</b>文件，不是三个：<code>learn.vue</code>（<b>10:31:14</b>，§5 归 fe-learn）、<code>duel.vue</code>（<b>10:33:24</b>，归 fe-game）、<code>wrongbook.vue</code>（<b>10:34:02</b> 与 <b>10:54:10</b>，<b>两笔</b>，归 fe-learn）、<code>server/content/content.json</code>（<b>10:37:07</b>，归 content）。<code>lesson.vue</code> 未动（00:21:32）。而渲染取证跑在 <b>09:12</b>（<code>lg.out.txt</code>，L1–L5 CRIT 124/124）与 <b>10:20–10:24</b>（<code>g1..g6.out.txt</code>）—— <b>页面全部晚于证据</b>：<b>L1–L5 全部、G 里只有 G5</b>（<code>duel.vue</code>）失去对应版本。<b>处置：这 11 格不拿旧读数签字，在新工作树上重跑渲染取证</b>（见 GV-01 的指派）—— <b>✅ 已重跑完</b>：10:49–10:55 在 <code>fx-render</code>（308 题基线）上取到 <code>lg</code> 124/124、<code>l5</code> 150/150、<code>g1–g6</code> 70/70，零 FAIL、console 干净；<code>lg-ob1</code>（10:55:23）还顺带证明 <b>10:54:10</b> 那一笔把 OB-1（<code>Cannot set properties of null (setting 'scrollLeft')</code>）修掉了 —— 09:12 与 10:44 两跑都还报着它。内容侧：<code>content.json</code> 一改，<code>items</code> <b>296→308</b>、<code>lessons</code> <b>19→20</b>、知识点 <b>76→80</b>，<b>C1–C4 的旧读数因此不再描述当前工作树</b>（C3 本就不受影响）。308 上的读数已由非作者重跑并在 <code>content.md</code> 记档，<b>但那是「追加读数」——四格的状态词还没有人重签</b>，详见本页 GV-02 的展开段。</div>
+        <details>
+          <summary>谁改的（已结案） · 三问的答复 · 连带影响 · 不许含糊的自陈</summary>
+          <div class="body">
+            <ul>
+              <li><b>✅ 谁写的 —— 已结案：<code>bd</code>（即编排者，同一个会话）</b>。原先记「两份自述互相冲突、磁盘判不出来」是<b>判重了</b>：<code>ListAgents</code> 显示本会话的名址就是 <code>hanyu-dazi-bd [66feaa]</code>，而 <code>PLAN/round7-user-approved.md</code> 里写「我（编排者）直接改的」的那只手就是本会话。见 GV-01。能确定的第二件事仍然成立：<b>没有走作者回写</b> —— 三页分属 fe-learn / fe-game 的独占写集、<code>content.json</code> 属 content 的。<b>所以：这三条泳道不要再回写这四个文件。</b></li>
+              <li><b>「仓库不是 git」这句已更正</b>：它<b>是</b> git 仓库（<code>master</code>，唯一的提交 <code>028de6a</code>「Day 1 收口存档」，2026-11-23 15:58:34）。但那次提交是 Day 1 中途的快照，粒度太粗 —— <b>今天的改动一概归到 <code>git diff HEAD</code> 里</b>，判不了归属。<b>mtime 仍是唯一的判别依据。</b></li>
+              <li><b>为什么这值得停下来看</b>：四拍的节奏是「并行功能波 → <b>冻结</b> → 非作者验收波 → 串行部署波」。冻结是验收的前提 —— 证据一旦与文件版本脱钩，「已验收」就成了一次性的。而且这次是<b>跨路写别人的独占写集</b>：三条泳道若从自己的副本回写，会把这些改动静默冲掉。</li>
+              <li><b>对 B1–B6 的净影响（已定，不必拍板）</b>：<code>server/src</code> 自 08:00 起零改动 ⇒ <b>代码主张成立</b>；但那份 <code>PASS=319</code> 是建在 <code>items=296</code> 上的，<b>记录里的读数要在 308 的新基线上重取</b>才算数。签字的<b>资格</b>不受影响（bd 在 <code>server/src</code> 一行没写）。</li>
+              <li><b>✅ L/G 的签字资格：11:4x 收窄，11:5x 闭合</b>：那三页是 <b>bd</b> 写的 ⇒ 它对 L1/L3/L4/G5 不再是非作者，所以当时指派给署名 <code>be-api</code> 的一方去签。<b>原先这里写「资格也定了」，理由是把它的会话名认成了 <code>hanyu-dazi-ba</code> —— 那个括号已被当事方（<code>ba</code>，fe-game 作者）直接否认，推断作废。</b>11:4x 逐会话问证、11:5x 闭合后的实况：<code>ListAgents</code> 里<b>没有叫 <code>be-api</code> 的会话</b>（它是文件内自署名），但 <b>11:5x 正面验明</b>署名 <code>be-api</code> 的一方 = 在册会话 <code>hanyu-dazi-7d [810033]</code>，写集 = §5 后端，与 L／G 的作者<b>均不相交</b> ⇒ <b>十一格同档、资格成立</b>（G 的作者 <code>ba</code> 与 fe-learn 的作者 <code>57</code> 此前亦各自亲手否认写过那十一格，那两条只作旁证、不作主据）。证词原文见 <a href="evidence/signer-identity-rollcall.txt">evidence/signer-identity-rollcall.txt</a>。</li>
+              <li><b>✅ 拍板 ① 已答：是，就是本会话批准的</b>。用户原话两条（先给调研报告 → 后一句「<code>同意你的建议，请继续</code>」）都在<b>本会话</b>；<code>PLAN/round7-user-approved.md</code> §一 也写着「批准人身份：<b>本会话的用户</b>」。批的<b>范围恰是这四处</b>，一一对应：<code>learn.vue</code>＝诚实性修正(d)、<code>duel.vue</code>＝PK 可见用时(c)、<code>wrongbook.vue</code>＝归纳句(b)、<code>content.json</code>＝四声辨调课时(a)。<b>先前写的「那是另一个会话写的记录，本会话只能引用」是错的，就此更正</b> —— 那份记录的作者就是本会话。<b>同时确认：批准只放宽了内容与交互，没有放宽任何验收标准。</b></li>
+              <li><b>✅ 拍板 ② 已答：等落定 —— 而且已经落定了</b>。工作树自 <b>10:54:10</b>（<code>wrongbook.vue</code> 最后一笔）起未再改任何产品文件，<b>冻结已恢复</b>，所以渲染重跑的条件成立、<b>现在就跑</b>（承接 GV-01 的指派：be-api 用 <code>web.cjs</code> 跑 <code>lg</code> + <code>g1..g6</code>）。<b>更前置那个岔路也定了</b>：重跑的夹具<b>从当前工作树新建</b>（<code>import-content.ts</code> 在临时库里跑），<b>20 课 / 308 题</b>；<b>不动共用开发库 <code>server/data/hanyu-dazi.db</code>（仍是 19 课 / 296 题，只读）</b>。代价是「四声辨调」这一课在共用库上暂时看不见 —— 那是部署波的事，不影响验收。</li>
+              <li><b>✅ 拍板 ③ 已答：不退回 —— 但「重取」只到读数，状态词还没重签（这是本节最要紧的一句）</b>。<code>content.json</code> 改后由 <code>hanyu-dazi-57</code> 在 308 基线上重跑并交回读数：<code>items 308</code>／<code>lessons 20</code>／<code>units 6</code>／知识点 <code>80</code>／<code>achievements 15</code>／<code>kind='listen'=40</code>（契约 §8 的硬指标没破）／<code>hint</code> 非空 <b>308/308</b>。这些已转录进 <code>PLAN/content.md</code> 的《308 基线重取读数》，并<b>明写为「追加读数，不是验收」</b>。<b>它明确不落 <code>content.md</code> 那四格的状态词</b>（改他人署名结论不属非作者权限，且它已上报自己的用户待裁决）⇒ <b>C1–C4 的「已验收」目前仍停在 02:42 那个 296 时点</b>，只差一位此刻够格的非作者（对 <code>server/content/**</code> 零字节）落字。<b>⚠️ 这句 11:52–11:58 已失效</b>：非作者 <code>ba</code> 已在 <b>308 时点</b>亲手重跑并落字，四格刷新为「已验收（308 时点）」，见 <a href="evidence/fe-game-c1c4-nonauthor.txt">evidence/fe-game-c1c4-nonauthor.txt</a>。</li>
+              <li><b>✅ OB-1（<code>scrollLeft</code> 空指针）有了<b>非作者</b>读数 —— 但只到静态层</b>：<code>wrongbook.vue</code> 那两笔是<b>编排者</b>写的，所以就由 <code>hanyu-dazi-57</code>（对 <code>mobile/src</code> 本轮零字节）只读磁盘复核，原文见 <a href="evidence/ob-1-nonauthor-review.txt">evidence/ob-1-nonauthor-review.txt</a>。买到四条：① <code>grep -rn '&lt;scroll-view' mobile/src/</code> 全仓<b>只剩两行注释</b> ⇒ 这个框架级隐患（<code>uni-h5.es.js:14594</code> 只判 <code>realScroll*</code>）的触发面<b>恰为 1 处</b>，无同类暴露面；② 替换实现 <code>.chips</code>＋<code>overflow-x:auto</code> <b>没有</b>踩 plan 点名的 <code>-webkit-overflow-scrolling</code>（全仓命中 0）；③ 三页 template <b>没破单根</b>；④ 产物钉子（<code>9aed44f8…</code>／38 assets／<code>uni-scroll-view</code> 2 chunk／<code>qbar-clock</code> 0）被第二方<b>逐字复算命中</b>。<b>没买到</b>：「这处修<b>对了</b>」—— 静态读盘证明不了运行期不再抛错，那条仍靠渲染侧的 <code>lg-ob1</code>（10:55:23）。本件<b>不涉及任何 L/G 状态词</b>。</li>
+              <li><b>⚠️ 一条不许含糊的自陈（含一处更正）</b>：<code>content.json</code> 是<b>本会话</b>（＝bd）10:37:07 改的 ⇒ <b>我现在不是 content 泳道的非作者</b>，C1–C4 的 308 重签我不能落字。另：先前这里写「四格的署名是 57」，<b>与 <code>PLAN/content.md:29-30</code> 不符</b> —— 那边的记录是 <b>C1/C3 由 orchestrator、C2/C4 由 be-api</b>。两处记录打架，此处按 <code>content.md</code> 更正，<b>以泳道自己的记录为准</b>。</li>
+              <li><b>已做／未做</b>：本轮<b>不签任何 L/G 格子</b>（bd 因写过那三页而无资格，不拿旧读数签字）；不写产品代码；<b>冻结已恢复</b>（10:54:10 之后产品文件零改动）；<code>hd-accbr.cjs</code> 与四套 dist 的重打仍停着等指令。完整记录见 <a href="evidence/be-api-accept-B1-B6.txt">evidence/be-api-accept-B1-B6.txt</a> 第五节。</li>
+              <li><b>✅ 拍板 ③ 的尾巴 11:52–11:58 已收（本条原句「C1–C4 的『已验收』目前仍停在 02:42 那个 296 时点」<u>已失效</u>）</b>：够格的非作者 <code>ba</code> 已在 <b>308 时点</b>亲手重跑并落字，四格状态词全部刷新为<b>「已验收（308 时点）」</b>，记档于 <a href="evidence/fe-game-c1c4-nonauthor.txt">evidence/fe-game-c1c4-nonauthor.txt</a> 与 <code>PLAN/content.md</code>《308 基线重签》。<b>308 与冻结这两件事至此都已闭环</b>。</li>
+            </ul>
+          </div>
+        </details>
+      </div>
+
+      <div class="cd">
+        <div class="ct">
+          <span class="cn">GV-03</span>
+          <span class="cq">已澄清 12:0x · 契约口径冲突 · 无需人拍板</span>
+        </div>
+        <h3>「非作者落字」与「本文件只由本路自己写」<b>打架</b> —— 上位规则是 §8，冲突处<b>以 §8 为准</b></h3>
+        <div class="cs">契约 §8 要求「已验收」由<b>没写这段代码的一方</b>亲手跑过再落字；而 <code>PLAN/fe-learn.md:3</code> 自述「本文件<b>只由 fe-learn 自己写</b>」。两条若照字面同时执行，<b>任何非作者都无法把状态词落进泳道文件</b> ⇒ 纪律自锁。提出人：<code>hanyu-dazi-57</code>（fe-learn）。<b>裁定：§8 是纪律层、泳道文件是记录层，记录层的自述不得反噬纪律层。</b></div>
+        <details>
+          <summary>裁定理由 · 落到实处的三条硬边界 · 没有动过什么</summary>
+          <div class="body">
+            <ul>
+              <li><b>裁定理由</b>：§8 的判据是「谁跑的断言」，不是「谁写的文件」。把落字权收归作者，等于把「非作者验收」改成「自验收」，那正是 <code>plan.html:927</code> 唯一不许妥协的一条。所以冲突处一律按 §8 执行。</li>
+              <li><b>边界 ① —— 语义不变（这条最要紧）</b>：非作者落字<b>只能填状态词</b>。泳道里已有的结论、读数、甚至「本路不自验收」这句自述，<b>一个字都不许改</b>，要更正只能<b>另起一段追加</b>（本页 CR-01 与 <code>content.md</code>《308 基线重签》都照此办）。<b>改他人结论不是非作者的权限</b>。</li>
+              <li><b>边界 ② —— 本次并未需要动用这个裁定</b>：事实核查后，C1–C4 的落字发生在 <code>PLAN/content.md</code>（该文件<b>全文没有</b>「只由自己写」这类自述），而 L1–L5 / G1–G6 那十一格由 <code>7d</code> 落进 <code>evidence/be-api-accept-LG.txt</code>（新增文件，非改写泳道文件）⇒ <b>本轮实际零冲突</b>。本卡是<b>为后续波次预先钉死的口径</b>，不是补办的追认。</li>
+              <li><b>边界 ③ —— 不许为了「顺手统一」去改那份自述</b>：<code>PLAN/fe-learn.md</code> 的 mtime 是归属判据的一部分（<code>mv</code>／重写会污染归因台账）⇒ <b>编排者不动它</b>。口径写在本页，冲突时以本页 + §8 为准。</li>
+              <li><b>这条例外的方向是「收紧」不是「放宽」</b>：它没有让任何一格更容易写上「已验收」，只是让够格的非作者<b>有地方落字</b>。状态词的判据（亲手跑过、附证据、非作者）一点没松。</li>
+            </ul>
+          </div>
+        </details>
+      </div>
+
+      <div class="cd">
+        <div class="ct">
+          <span class="cn">GV-04</span>
+          <span class="cq">已结案 11:5x · 活页单写纪律 · 无需人拍板</span>
+        </div>
+        <h3>本大屏曾<b>同时有两只手在写</b>（11:52:42 一笔非编排者的改动）—— 已确认<b>单写者</b>纪律</h3>
+        <div class="cs"><code>PLAN/progress.html</code> 在 11:52:42 被非编排者改过一笔（我据此一度错报「某一格没落地」，经核对是我读错、那格确有该笔文字）。<b>写者已认领：<code>hanyu-dazi-7d</code> 自陈本轮在该页共落两笔</b>（早前一处 <code>class="beat done"</code>、以及 11:52:42 的「已滞后」那一格），并已接受「此后对该页零字节、要改先去信编排者代写」；<code>ba</code> 亦已声明本轮<b>未动</b>该页（其在盘上的落笔是 <code>PLAN/content.md</code> 追加段与证据件）。<b>根因不是谁写错了内容，是这份文件没有约定唯一写者</b> —— 两人各持一份内存里的旧版本往同一文件写，后写者会静默覆盖先写者，而且<b>看不出来</b>（这类覆盖不报错、不留痕）。<span class="self">署名按当事方自陈记，与 §九·三 同一条诚实边界：自陈不等于磁盘证得。</span></div>
+        <details>
+          <summary>为什么单写者 · 已改的规矩 · 与「非作者验收」不冲突</summary>
+          <div class="body">
+            <ul>
+              <li><b>为什么必须是单写者</b>：大屏是<b>汇总视图</b>，它的正确性建立在「每格的内容都来自它自己的证据文件」之上。多写者下，任何一格都可能是某一版旧内存的残留 —— 这和在 <code>PLAN/*.md</code> 里落状态词不是一回事（那边是<b>追加式</b>，可逐行归因）。</li>
+              <li><b>已改的规矩</b>：<code>progress.html</code> 的<b>唯一写者 = 编排者 <code>hanyu-dazi-bd [66feaa]</code></b>。别路要改这一页，只能<b>把文本交给编排者代写</b>，不得直接落盘。</li>
+              <li><b>与「非作者验收」不冲突</b>：非作者仍然亲手跑断言、亲手把状态词落进<b>自己该落的证据文件／泳道文件</b>；大屏只是<b>转述</b>，转述权归编排者。<b>谁跑断言</b>（资格）与<b>谁写大屏</b>（落盘）是两件事，别混起来。</li>
+              <li><b>没有回溯处罚</b>：11:52:42 那一笔内容<b>被保留</b>（它是对的），只做归属更正。教训归教训，不因此把已完成的格子作废。</li>
+              <li><b>同类风险还剩一处要知道</b>：其余 <code>PLAN/*.md</code>（<code>content.md</code> 等）是<b>可追加</b>的，多只手写不会互相覆盖，但<b>仍会掉进「三个泳道回写同一文件」的旧坑</b>（GV-02）⇒ 各路的写集边界见契约 §5，别跨路回写。</li>
+            </ul>
+          </div>
+        </details>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ===================== KPI ===================== -->
+  <section class="sec">
+    <div class="sh">
+      <h2>总览</h2>
+      <span class="note">按单元记，不按任务、文件或提交记</span>
+    </div>
+    <div class="kpis">
+
+      <div class="kpi" data-s="ok">
+        <div class="kh"><span class="g">✓</span>待裁决</div>
+        <div class="kv">0</div>
+        <div class="kf"><b>CR-01 已于 19:1x 结案</b>（用户批「修 CR-01，然后进部署波」→ 已修 / 已验（作者自证） / 已部署），<b>现为 0 条</b>。<b>GV-01</b> / <b>GV-02</b> 早结案，<b>GV-03</b> / <b>GV-04</b> 属<b>编排者按上位规则自决</b>的口径澄清，<b>不计入「等你拍板」</b>。<br>⚠️ <b>但换了一条只等你点一下的（非裁决性质）</b>：给 <code>hanyu.zj17z.cn</code> 加 A 记录 → <code>114.132.232.60</code>，否则域名 NXDOMAIN、HTTPS 补不上（见 CR-01 卡末条）。</div>
+      </div>
+
+      <div class="kpi" data-s="none">
+        <div class="kh">可验收单元</div>
+        <div class="kv">21</div>
+        <div class="kf">四条泳道合计</div>
+      </div>
+
+      <div class="kpi" data-s="ok">
+        <div class="kh"><span class="g">✓</span>已验收</div>
+        <div class="kv">21<span class="u">/21</span></div>
+        <div class="kf">非作者跑过断言。其中 <b>L1–L5 / G1–G6 共 11 格</b>由署名 <b>be-api</b> 的一方于 <b>11:15–11:20</b> 亲手跑 <code>web.cjs</code> 八段落定（CRIT 274/274 + 70/70，<b>FAIL=0</b>，见 <code>PLAN/evidence/be-api-accept-LG.txt</code>）；<b>B1–B6</b> 由 <b>bd</b> 落字。⚠️ 两处限定：<b>G4 的 13/13 含 2 条虚条</b>（旧量具读错库，已修+变异证明）；<b>「签字人是谁」11:4x 核、11:5x 闭</b> —— 那十一格署的是文件内自署名 <code>be-api</code>（<code>ListAgents</code> 无此名址），<b>11:5x 正面验明</b>它 = 在册会话 <code>hanyu-dazi-7d [810033]</code>（写集 = §5 后端，与 L／G 的作者<b>均不相交</b>），<code>ba</code>／<code>57</code> 亦各自亲手否认写过那十一格 ⇒ <b>L1–L5 与 G1–G6 同档，资格成立</b>；残余只有一条<b>自陈成分</b>（名址由它自己报）。证词见 <a href="evidence/signer-identity-rollcall.txt">evidence/signer-identity-rollcall.txt</a>。两条都不改任何读数本身</div>
+      </div>
+
+      <div class="kpi" data-s="pend">
+        <div class="kh"><span class="g">◑</span>待验收</div>
+        <div class="kv">0<span class="u">/21</span></div>
+        <div class="kf">21 格的字<b>都落了</b>，所以计数是 0。⚠️ 但「字落了」不等于「引用同样硬」——<b>两种强度，别读成一档</b>：<br>①&nbsp;<b>✅ C1–C4 已在 308 时点由非作者重签（11:52–11:58，已闭）</b>：<code>content.json</code> 10:37:07 改成 296→308 后，四格由非作者 <code>ba</code>（对 <code>server/content/**</code> 零字节、未开共用库、未占 chromium 栈）亲手重跑并落字「<b>已验收（308 时点）</b>」，记档于 <code>PLAN/content.md</code>《308 基线重签》与 <a href="evidence/fe-game-c1c4-nonauthor.txt">evidence/fe-game-c1c4-nonauthor.txt</a>；<br>②&nbsp;<b>G4</b> 引用的「13/13」是<b>旧量具</b>读数，含 <b>2 条零判别力的虚条</b>（已修 + 变异证明，见下）；<br>③&nbsp;<b>✅「签字人是谁」11:5x 已闭</b>：那 11 格署的是文件内自署名 <code>be-api</code>（<code>ListAgents</code> 在册 4 个会话里<b>没有这个名字</b>）⇒ 11:5x <b>正面验明</b>它 = <code>hanyu-dazi-7d [810033]</code>（写集 = §5 后端，与 L／G 作者<b>均不相交</b>），<code>ba</code>／<code>57</code> 亦各自亲手否认 ⇒ <b>L1–L5 与 G1–G6 同档，资格成立</b>（见 GV-01 第二条，证词见 <a href="evidence/signer-identity-rollcall.txt">evidence/signer-identity-rollcall.txt</a>）</div>
+      </div>
+
+      <div class="kpi" data-s="block">
+        <div class="kh"><span class="g">■</span>阻塞</div>
+        <div class="kv">0</div>
+        <div class="kf">没有卡在人身上的事</div>
+      </div>
+
+      <div class="kpi" data-s="none">
+        <div class="kh">已滞后</div>
+        <div class="kv">0</div>
+        <div class="kf">今天 <b>Day 2</b>（起点 11-23）。<b>无单元过期</b> —— 21 格的计划时点最晚只到 <b>M5 · Day 5</b>，<code>plan.html</code> §十一 的 M2–M5 均未到期 ⇒ 计数 0。⚠️ 这个「0」只表示<b>没有到期单元</b>，<b>不等于</b>「21 格都硬」（强度差异见上一格）</div>
+      </div>
+
+      <div class="kpi" data-s="block">
+        <div class="kh"><span class="g">■</span>活动表非零</div>
+        <div class="kv">7<span class="u">/10</span></div>
+        <div class="kf"><b>11:28</b> 重扫（只读）：<b>7/10 张非零 / 401 行</b>，与 02:48、11:02 两次<b>逐表相同</b>。最后写入 <b>00:22:03</b> ⇒ 已静默 <b>11 小时 06 分</b>，是残留不是流量。⇒ 本轮验收跑（11:15–11:20，八段 chromium）<b>没有往共用库写一个字</b></div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ===================== 完成度环 + 泳道 ===================== -->
+  <section class="sec">
+    <div class="sh">
+      <h2>验收完成度</h2>
+      <span class="note">「已验收」只能由非作者写</span>
+    </div>
+    <div class="band">
+
+      <div class="card gauge">
+        <span class="gt">21 / 21 单元已验收</span>
+        <div class="ringwrap">
+          <svg viewBox="0 0 180 180" role="img" aria-label="验收完成度 21/21，100%">
+            <circle class="rg-track" cx="90" cy="90" r="74"></circle>
+            <circle class="rg-arc" cx="90" cy="90" r="74"
+                    transform="rotate(-90 90 90)"
+                    stroke-dasharray="464.96 0" stroke-dashoffset="0"></circle>
+          </svg>
+          <div class="ringc">
+            <span class="rv">100%</span>
+            <span class="rl">21 / 21</span>
+          </div>
+        </div>
+        <div class="gleg">
+          <span><b>21</b> 已验收</span>
+          <span><b>0</b> 待验收</span>
+          <span><b>0</b> 其他状态</span>
+          <span class="cav">✓ C1–C4 已由<b>非作者</b> <code>ba</code> 在 <b>308 时点</b>重签（11:52–11:58，未占 chromium 栈）</span>
+          <span class="cav">⚠ G4 引用的 13/13 出自<b>旧量具</b>，含 2 条虚条（已修）</span>
+          <span class="cav">✓ 署名 <code>be-api</code> 的签字人 = 在册会话 <code>hanyu-dazi-7d</code>（写集 = 后端），十一格同档</span>
+          <span class="cav">✓ C1–C4 的 308 读数另获<b>独立交叉复核</b>：<code>7d</code> 在<b>自己目录</b>另起只读句柄复算，四库逐格相同（<a href="evidence/fe-game-c1c4-crosscheck-7d.txt">凭证</a>）</span>
+          <span class="cav">⚠ <b>共同缺口（12:1x、14:17、14:21 三次缩小，照实改口）</b>：「验收对象 = 这批字节」缺的是<b>哈希凭证</b>，<b>不是对象不符</b> —— ① <code>be-api-accept-LG.txt:99</code> <b>本来就钉了</b>四个改动源件的<u>字节数 + 纳秒 mtime</u>（<code>duel.vue</code> 23146 B @10:33:24.776431900，我已复测逐位相同）⇒ 「LG 对本泳道一无记录」<b>是我先前读错</b>；② 那次验收打在 <b>5173 vite dev（实时编译当前源码）</b>上，<b>不是打在 dist 上</b> ⇒ 源码层对象是对的。fe-game 现补 17 行源件 md5（<a href="evidence/fe-game-lane-pins.txt">凭证</a>）；<b>be-api 14:17 补 13 行、14:21 更新（<a href="evidence/be-api-lane-pins.txt">凭证</a>，现 <code>14626 B / md5 fde5d48a9dc9db3c820ec095fb6297d7 / 14:23:34</code>）且其写集被完整覆盖</b>，并由非作者 <code>ba</code> 复算成<b>穷尽划分</b>（<a href="evidence/fe-game-nonauthor-7d-lanepins.txt">凭证</a>：25＋9＝34，<b>没有第五类</b>）；<b>fe-learn 与 content 两条仍只有字节数+mtime，没有 md5</b>，部署波可逐行补</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="lanes">
+
+          <div class="lane">
+            <span class="lt"><span class="nm">be-api</span><span class="who">接口 · 服务 · 迁移</span></span>
+            <span class="tk"><span class="fill" style="width:100%"></span></span>
+            <span class="pv">6<span class="sm">/6</span></span>
+          </div>
+
+          <div class="lane">
+            <span class="lt"><span class="nm">fe-learn</span><span class="who">单元 · 课时 · 答题 · 错题本 · 进度</span></span>
+            <span class="tk"><span class="fill" style="width:100%"></span></span>
+            <span class="pv">5<span class="sm">/5</span></span>
+          </div>
+
+          <div class="lane">
+            <span class="lt"><span class="nm">fe-game</span><span class="who">打卡 · 连击 · 榜单 · 印章 · 对战 · 组队</span></span>
+            <span class="tk"><span class="fill" style="width:100%"></span></span>
+            <span class="pv">6<span class="sm">/6</span></span>
+          </div>
+
+          <div class="lane">
+            <span class="lt"><span class="nm">content</span><span class="who">单元 · 课时 · 题目 · 成就定义</span></span>
+            <span class="tk"><span class="fill" style="width:100%"></span></span>
+            <span class="pv">4<span class="sm">/4</span></span>
+          </div>
+
+          <div class="tot">
+            <span class="lb">合计</span>
+            <span class="tk"><span class="fill" style="width:100%"></span></span>
+            <span class="pv">21<span class="sm">/21 · 100%</span></span>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ===================== 单元矩阵 ===================== -->
+  <section class="sec">
+    <div class="sh">
+      <h2>21 个单元</h2>
+      <span class="note">点格子跳到下面的验收标准</span>
+    </div>
+    <div class="card">
+      <div class="mx">
+
+        <div class="gr">
+          <span class="gl">be-api</span>
+          <div class="cells">
+            <a class="cell" data-s="ok" href="#u-B1" title="B1 内容浏览接口 · 已验收"><span>B1</span><span class="cg">✓</span></a>
+            <a class="cell" data-s="ok" href="#u-B2" title="B2 答题提交（服务端判错）· 已验收"><span>B2</span><span class="cg">✓</span></a>
+            <a class="cell" data-s="ok" href="#u-B3" title="B3 错题本接口 · 已验收"><span>B3</span><span class="cg">✓</span></a>
+            <a class="cell" data-s="ok" href="#u-B4" title="B4 进度与统计 · 已验收"><span>B4</span><span class="cg">✓</span></a>
+            <a class="cell" data-s="ok" href="#u-B5" title="B5 举报与公开资料 · 已验收"><span>B5</span><span class="cg">✓</span></a>
+            <a class="cell" data-s="ok" href="#u-B6" title="B6 静态资源 · 已验收"><span>B6</span><span class="cg">✓</span></a>
+          </div>
+        </div>
+
+        <div class="gr">
+          <span class="gl">fe-learn</span>
+          <div class="cells">
+            <a class="cell" data-s="ok" href="#u-L1" title="L1 单元 → 课时 浏览 · 已验收"><span>L1</span><span class="cg">✓</span></a>
+            <a class="cell" data-s="ok" href="#u-L2" title="L2 答题页四题型 · 已验收"><span>L2</span><span class="cg">✓</span></a>
+            <a class="cell" data-s="ok" href="#u-L3" title="L3 错题本页与重练 · 已验收"><span>L3</span><span class="cg">✓</span></a>
+            <a class="cell" data-s="ok" href="#u-L4" title="L4 进度条 · 已验收"><span>L4</span><span class="cg">✓</span></a>
+            <a class="cell" data-s="ok" href="#u-L5" title="L5 笔画描红 · 已验收"><span>L5</span><span class="cg">✓</span></a>
+          </div>
+        </div>
+
+        <div class="gr">
+          <span class="gl">fe-game</span>
+          <div class="cells">
+            <a class="cell" data-s="ok" href="#u-G1" title="G1 「我的」页单一 summary · 已验收"><span>G1</span><span class="cg">✓</span></a>
+            <a class="cell" data-s="ok" href="#u-G2" title="G2 排行榜 · 已验收"><span>G2</span><span class="cg">✓</span></a>
+            <a class="cell" data-s="ok" href="#u-G3" title="G3 印章页（含灰态）· 已验收"><span>G3</span><span class="cg">✓</span></a>
+            <a class="cell" data-s="ok" href="#u-G4" title="G4 打卡与连击 · 已验收"><span>G4</span><span class="cg">✓</span></a>
+            <a class="cell" data-s="ok" href="#u-G5" title="G5 PK 对战 + 分享链接 · 已验收"><span>G5</span><span class="cg">✓</span></a>
+            <a class="cell" data-s="ok" href="#u-G6" title="G6 组队 · 已验收"><span>G6</span><span class="cg">✓</span></a>
+          </div>
+        </div>
+
+        <div class="gr">
+          <span class="gl">content</span>
+          <div class="cells">
+            <a class="cell" data-s="ok" href="#u-C1" title="C1 40 个音频 · 已验收"><span>C1</span><span class="cg">✓</span></a>
+            <a class="cell" data-s="ok" href="#u-C2" title="C2 hint 入库 · 已验收"><span>C2</span><span class="cg">✓</span></a>
+            <a class="cell" data-s="ok" href="#u-C3" title="C3 印章定义种子 · 已验收"><span>C3</span><span class="cg">✓</span></a>
+            <a class="cell" data-s="ok" href="#u-C4" title="C4 内容扩量 + 幂等 · 已验收"><span>C4</span><span class="cg">✓</span></a>
+          </div>
+        </div>
+
+      </div>
+      <div class="legend" style="margin-top:13px">
+        <span class="pill p-idle"><span class="g">○</span>未开始</span>
+        <span class="pill p-run"><span class="g">▸</span>进行中</span>
+        <span class="pill p-pend"><span class="g">◑</span>待验收</span>
+        <span class="pill p-ok"><span class="g">✓</span>已验收</span>
+        <span class="pill p-block"><span class="g">■</span>阻塞</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== 四拍 ===================== -->
+  <section class="sec">
+    <div class="sh">
+      <h2>一轮四拍</h2>
+      <span class="note">构建与部署永远串行，只由 orchestrator 执行</span>
+    </div>
+    <div class="beats">
+
+      <div class="beat done">
+        <span class="bi">1</span>
+        <span class="bt">
+          <span class="bn">并行功能波</span>
+          <span class="bd">四路同时写码</span>
+          <span class="bs">已完成</span>
+        </span>
+      </div>
+
+      <div class="beat done">
+        <span class="bi">2</span>
+        <span class="bt">
+          <span class="bn">冻结</span>
+          <span class="bd">停手，状态封版</span>
+          <span class="bs">已完成</span>
+        </span>
+      </div>
+
+      <div class="beat done">
+        <span class="bi">3</span>
+        <span class="bt">
+          <span class="bn">非作者验收波</span>
+          <span class="bd">21 个单元全部落字</span>
+          <span class="bs">已完成</span>
+        </span>
+      </div>
+
+      <div class="beat done">
+        <span class="bi">4</span>
+        <span class="bt">
+          <span class="bn">串行部署波</span>
+          <span class="bd"><b>已完成 19:07</b> —— H5 <b>已重打</b>（38 文件指纹 <code>0799c11f…</code>，源码 10:31–10:54 早于产物 19:05:46）＋后端四件产物 md5 两侧逐字节相同，一并上线。<code>DEPLOY_EXIT=0</code>、健康 <code>status:up</code>、8091 只监听回环、error.log 空、学校三进程未动。<b>⚠️ 但只上了 HTTP</b>：<code>hanyu.zj17z.cn</code> NXDOMAIN，需加 A 记录 → 114.132.232.60 后 <code>--certbot</code> 补 HTTPS（线上验收因此<b>未闭</b>）</span>
+          <span class="bs">⚠️ 已完成（HTTP）· HTTPS 待 DNS</span>
+        </span>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ===================== 单元明细 ===================== -->
+  <section class="sec">
+    <div class="sh">
+      <h2>单元清单 · 验收标准与证据</h2>
+      <span class="note">M = 里程碑（plan.html §十一），Day 相对项目起点</span>
+    </div>
+
+    <div class="ugrid">
+
+      <div class="unit done" id="u-B1">
+        <div class="ut"><span class="uid">B1</span><span class="uname">内容浏览接口</span><span class="pill p-ok"><span class="g">✓</span>已验收</span></div>
+        <div class="um">M2 · Day 2</div>
+        <div class="ua"><code>GET /units</code>、<code>GET /lessons/:id</code> 带 token → <code>code:0</code>，字段名与 §4.1 <b>逐字一致</b></div>
+        <div class="ue"><span class="k">证据</span><a href="evidence/be-api-B1-units.txt">evidence/be-api-B1-units.txt</a><span class="self">· be-api 自证（作者）</span></div>
+        <div class="ue"><span class="k">非作者</span><a href="evidence/be-api-accept-B1-B6.txt">evidence/be-api-accept-B1-B6.txt</a><span class="pass">· bd（非作者）复核签名 11:0x · 换夹具/换端口/换人三跑 319/319</span></div>
+      </div>
+
+      <div class="unit done" id="u-B2">
+        <div class="ut"><span class="uid">B2</span><span class="uname">答题提交（服务端判错）</span><span class="pill p-ok"><span class="g">✓</span>已验收</span></div>
+        <div class="um">M2 · Day 2</div>
+        <div class="ua"><code>POST /attempts</code> 用<b>故意错的答案</b>测 → <code>isCorrect:false</code>，证明没信前端</div>
+        <div class="ue"><span class="k">证据</span><a href="evidence/be-api-B2-attempts.txt">evidence/be-api-B2-attempts.txt</a><span class="self">· be-api 自证（作者）</span></div>
+        <div class="ue"><span class="k">非作者</span><a href="evidence/be-api-accept-B1-B6.txt">evidence/be-api-accept-B1-B6.txt</a><span class="pass">· bd（非作者）复核签名 11:0x · 换夹具/换端口/换人三跑 319/319</span></div>
+      </div>
+
+      <div class="unit done" id="u-B3">
+        <div class="ut"><span class="uid">B3</span><span class="uname">错题本接口</span><span class="pill p-ok"><span class="g">✓</span>已验收</span></div>
+        <div class="um">M2 · Day 2</div>
+        <div class="ua"><code>GET /wrongbook</code> 返回 total / list / byLesson 三段，字段与 §4.3 逐字一致</div>
+        <div class="ue"><span class="k">证据</span><a href="evidence/be-api-B3-wrongbook.txt">evidence/be-api-B3-wrongbook.txt</a><span class="self">· be-api 自证（作者）</span></div>
+        <div class="ue"><span class="k">非作者</span><a href="evidence/be-api-accept-B1-B6.txt">evidence/be-api-accept-B1-B6.txt</a><span class="pass">· bd（非作者）复核签名 11:0x · 换夹具/换端口/换人三跑 319/319</span></div>
+      </div>
+
+      <div class="unit done" id="u-B4">
+        <div class="ut"><span class="uid">B4</span><span class="uname">进度与统计</span><span class="pill p-ok"><span class="g">✓</span>已验收</span></div>
+        <div class="um">M3 · Day 3</div>
+        <div class="ua"><code>GET /profile/summary</code> 一次给 xp / rank / streak / stamps / learn；<code>GET /profile/calendar</code> 30 天且升序末位是今天</div>
+        <div class="ue"><span class="k">证据</span><a href="evidence/be-api-B4-profile.txt">evidence/be-api-B4-profile.txt</a><span class="self">· be-api 自证（作者）</span></div>
+        <div class="ue"><span class="k">非作者</span><a href="evidence/be-api-accept-B1-B6.txt">evidence/be-api-accept-B1-B6.txt</a><span class="pass">· bd（非作者）复核签名 11:0x · 换夹具/换端口/换人三跑 319/319</span></div>
+      </div>
+
+      <div class="unit done" id="u-B5">
+        <div class="ut"><span class="uid">B5</span><span class="uname">举报与公开资料</span><span class="pill p-ok"><span class="g">✓</span>已验收</span></div>
+        <div class="um">M5 · Day 5</div>
+        <div class="ua"><code>GET /users/:id</code> 恰好 <b>9 个</b>契约字段；<code>reports</code> 表迁移已建</div>
+        <div class="ue"><span class="k">证据</span><a href="evidence/be-api-B5-users-reports.txt">evidence/be-api-B5-users-reports.txt</a><span class="self">· be-api 自证（作者）</span></div>
+        <div class="ue"><span class="k">非作者</span><a href="evidence/be-api-accept-B1-B6.txt">evidence/be-api-accept-B1-B6.txt</a><span class="pass">· bd（非作者）复核签名 11:0x · 换夹具/换端口/换人三跑 319/319</span></div>
+      </div>
+
+      <div class="unit done" id="u-B6">
+        <div class="ut"><span class="uid">B6</span><span class="uname">静态资源</span><span class="pill p-ok"><span class="g">✓</span>已验收</span></div>
+        <div class="um">M2 · Day 2</div>
+        <div class="ua"><code>/audio</code>、<code>/uploads</code> 已在 <code>app.ts</code> 挂上且能取到文件</div>
+        <div class="ue"><span class="k">证据</span><a href="evidence/be-api-B6-static.txt">evidence/be-api-B6-static.txt</a><span class="self">· be-api 自证（作者）</span></div>
+        <div class="ue"><span class="k">非作者</span><a href="evidence/be-api-accept-B1-B6.txt">evidence/be-api-accept-B1-B6.txt</a><span class="pass">· bd（非作者）复核签名 11:0x · 换夹具/换端口/换人三跑 319/319</span></div>
+      </div>
+
+      <div class="unit done" id="u-L1">
+        <div class="ut"><span class="uid">L1</span><span class="uname">单元 → 课时 浏览</span><span class="pill p-ok"><span class="g">✓</span>已验收</span></div>
+        <div class="um">M2 · Day 2</div>
+        <div class="ua"><code>learn → lesson</code> 能点进去，显示课时列表</div>
+        <div class="um">第四轮浏览器断言 ✅ · 点单元卡 <code>{"inView":true,"hitSelf":true,"inTabbar":false}</code> → 3 张课时卡</div>
+        <div class="ue"><span class="k">证据</span><a href="evidence/fe-learn-l1-l5.txt">evidence/fe-learn-l1-l5.txt</a><span class="self">· 作者自证</span></div>
+        <div class="ue"><span class="k">非作者</span><a href="evidence/be-api-accept-LG.txt">evidence/be-api-accept-LG.txt</a><span class="pass">· be-api 于 11:15–11:20 跑 lg 124/124 · l5 150/150（FAIL=0）· 通过</span><span class="self">· 署名方 = <code>hanyu-dazi-7d</code>（11:5x 验明：写集 = 后端，与 L 作者不相交），见 GV-01 第二条</span></div>
+      </div>
+
+      <div class="unit done" id="u-L2">
+        <div class="ut"><span class="uid">L2</span><span class="uname">答题页四题型</span><span class="pill p-ok"><span class="g">✓</span>已验收</span></div>
+        <div class="um">M2 · Day 2</div>
+        <div class="ua">认字 / 选拼音 / 选词义 / 听音选字 四型都能作答并即时反馈</div>
+        <div class="um">第四轮浏览器断言 ✅ · 25 题五型对错两面全绿，写端点被拦 ⇒ <b>零写入</b></div>
+        <div class="ue"><span class="k">证据</span><a href="evidence/fe-learn-l1-l5.txt">evidence/fe-learn-l1-l5.txt</a><span class="self">· 作者自证</span></div>
+        <div class="ue"><span class="k">非作者</span><a href="evidence/be-api-accept-LG.txt">evidence/be-api-accept-LG.txt</a><span class="pass">· be-api 于 11:15–11:20 跑 lg 124/124 · l5 150/150（FAIL=0）· 通过</span><span class="self">· 署名方 = <code>hanyu-dazi-7d</code>（11:5x 验明：写集 = 后端，与 L 作者不相交），见 GV-01 第二条</span></div>
+      </div>
+
+      <div class="unit done" id="u-L3">
+        <div class="ut"><span class="uid">L3</span><span class="uname">错题本页与重练</span><span class="pill p-ok"><span class="g">✓</span>已验收</span></div>
+        <div class="um">M2 · Day 2</div>
+        <div class="ua">答错的题出现在 <code>wrongbook</code>，且能重练</div>
+        <div class="um">第五轮浏览器断言 ✅ · 故意答错 4 题 → <code>total=4</code>（含描红题点「写不出来」）· <code>hint</code>/答案可展开 · 课时筛选不塌 · <b>连对两次自动移出</b>（<code>cleared 0→4</code>、<code>remaining 4→0</code>、回本子空态）</div>
+        <div class="ue"><span class="k">证据</span><a href="evidence/fe-learn-l1-l5.txt">evidence/fe-learn-l1-l5.txt</a><span class="self">· 作者自证</span></div>
+        <div class="ue"><span class="k">非作者</span><a href="evidence/be-api-accept-LG.txt">evidence/be-api-accept-LG.txt</a><span class="pass">· be-api 于 11:15–11:20 跑 lg 124/124 · l5 150/150（FAIL=0）· 通过</span><span class="self">· 署名方 = <code>hanyu-dazi-7d</code>（11:5x 验明：写集 = 后端，与 L 作者不相交），见 GV-01 第二条</span></div>
+      </div>
+
+      <div class="unit done" id="u-L4">
+        <div class="ut"><span class="uid">L4</span><span class="uname">进度条</span><span class="pill p-ok"><span class="g">✓</span>已验收</span></div>
+        <div class="um">M2 · Day 2</div>
+        <div class="ua">课时完成度与单元进度条随答题动起来</div>
+        <div class="um">第六轮浏览器断言 ✅ · <b>课时完成度</b>与<b>单元进度条</b>两半都随答题动起来</div>
+        <div class="um">✅ 变异测试（修前必红、修后必绿）· 两跑都走<b>真实页面栈</b>：<br>
+          &nbsp;&nbsp;&nbsp;修前靶子 lesson 14「买东西」→ 点「回课时」返回后卡仍是 <b>未开始 / 0%</b>（同刻 <code>finish</code> 回包 <code>status:done 12/12</code>）<br>
+          &nbsp;&nbsp;&nbsp;修后靶子 lesson 15「出门坐车」→ 返回后卡变 <b>已完成 / 100%</b>（卡上「最好 12/12」一并刷新）<br>
+          &nbsp;&nbsp;&nbsp;修法：取数从 <code>onLoad</code> 整体挪进 <code>onShow</code>（<code>lesson.vue</code>；<code>onLoad</code> 只留接参，避免首进双取）<br>
+          &nbsp;&nbsp;&nbsp;单元进度条两跑分别 <code>0% → 33%</code> / <code>33% → 67%</code>　·　非 2xx <b>0 条</b>　·　控制台<b>全空</b><br>
+          &nbsp;&nbsp;&nbsp;<b>D1 已修并复验通过</b>，详见 <a href="fe-learn.md">fe-learn.md</a> §D1</div>
+        <div class="ue"><span class="k">证据</span><a href="evidence/fe-learn-l1-l5.txt">evidence/fe-learn-l1-l5.txt</a><span class="self">· 作者自证</span></div>
+        <div class="ue"><span class="k">非作者</span><a href="evidence/be-api-accept-LG.txt">evidence/be-api-accept-LG.txt</a><span class="pass">· be-api 于 11:15–11:20 跑 lg 124/124 · l5 150/150（FAIL=0）· 通过</span><span class="self">· 署名方 = <code>hanyu-dazi-7d</code>（11:5x 验明：写集 = 后端，与 L 作者不相交），见 GV-01 第二条</span></div>
+      </div>
+
+      <div class="unit done" id="u-L5">
+        <div class="ut"><span class="uid">L5</span><span class="uname">笔画描红</span><span class="pill p-ok"><span class="g">✓</span>已验收</span></div>
+        <div class="um">M2 · Day 2</div>
+        <div class="ua">hanzi-writer <b>本地打包</b>（不走 CDN），库内 <b>28</b> 个描红字全部能描</div>
+        <div class="um">第四轮浏览器断言 ✅ · <code>createTrace 28/28</code> · <b>CDN 请求 0 条</b> · 非本机请求 0 条</div>
+        <div class="ue"><span class="k">证据</span><a href="evidence/fe-learn-l1-l5.txt">evidence/fe-learn-l1-l5.txt</a><span class="self">· 作者自证</span></div>
+        <div class="ue"><span class="k">非作者</span><a href="evidence/be-api-accept-LG.txt">evidence/be-api-accept-LG.txt</a><span class="pass">· be-api 于 11:15–11:20 跑 lg 124/124 · l5 150/150（FAIL=0）· 通过</span><span class="self">· 署名方 = <code>hanyu-dazi-7d</code>（11:5x 验明：写集 = 后端，与 L 作者不相交），见 GV-01 第二条</span></div>
+      </div>
+
+      <div style="border:1px solid var(--pend);border-left:4px solid var(--pend);background:var(--pend-bg);border-radius:10px;padding:10px 14px">
+        <div style="font-family:var(--mono);font-size:10.5px;font-weight:700;color:var(--pend);letter-spacing:.08em;margin-bottom:4px">⚠ fe-learn：「渲染书全绿」不等于「§8 那四条都验过」—— 逐条对账</div>
+        <div style="font-size:11.5px;color:var(--fg-2);line-height:1.6">非作者 be-api 跑的那本 <code>web.cjs</code> 是 <b>L1–L5 的渲染行为书</b>，不是 §8 那四条的书。逐条对账（复核原文见 <a href="evidence/fe-game-nonauthor-review.txt">evidence/fe-game-nonauthor-review.txt</a> §4–§5）：<br>
+          <b>①</b> 走完整课 + 错题进 wrongbook —— 书里有 CRIT 覆盖 <b>✅</b><br>
+          <b>②</b> stroke 页 hanzi-writer <b>本地打包</b> —— 书里只有一条<b>负向</b> AUX（<code>L4.x.ext</code>「外部域名请求：（无）」）：只能证「<b>没请求</b>外部域名」，<b>不能证</b>「字形字节确实来自本地副本」。现有的是<b>静态</b>证据三件（<code>stroke/hanzi.ts:205-230</code> 的 <code>charDataLoader</code> 接管、全树 grep 零外链、本地 <code>vendor/hanzi-writer.min.js</code>），<b>没有运行时证明</b>。⚠️ <b>本条不得写成「已证」</b><br>
+          <b>③</b> 所有页面 <code>&lt;template&gt;</code> 单一根元素 —— 书里<b>完全没有</b>；改由 fe-game 路自写静态检查器 <code>root-check.cjs</code> 对五页（learn／lesson／practice／wrongbook／stroke）扫出 <b>5/5 PASS</b>，每页恰好一个根 <code>&lt;view&gt;</code> ⇒ <b>硬读数</b><br>
+          <b>④</b> <code>tsc</code>／<code>vite build</code> 无新增错误 —— 书里<b>完全没有</b>（渲染书不可能覆盖）；由非 fe-learn 一方实测 <code>vue-tsc --noEmit</code>（<code>--max-old-space-size=1536</code>）⇒ <b>EXIT=2，全文只有 2 条错误</b>，且都落在跨路文件 <code>src/utils/request.ts:10,13</code>（TS2451，<b>既有问题 CR-6</b>）⇒ §8 要的「无<b>新增</b>错误」<b>成立</b></div>
+      </div>
+
+      <div class="unit done" id="u-G1">
+        <div class="ut"><span class="uid">G1</span><span class="uname">「我的」页单一 summary</span><span class="pill p-ok"><span class="g">✓</span>已验收</span></div>
+        <div class="um">M3 · Day 3</div>
+        <div class="ua">所有数字来自<b>一个</b> <code>GET /profile/summary</code>，不是 N 个请求凑</div>
+        <div class="ue"><span class="k">证据</span><a href="evidence/be-api-accept-LG.txt">evidence/be-api-accept-LG.txt</a><span class="self">· 非作者 be-api · 八段之一（g1）· CRIT 10/10</span></div>
+      </div>
+
+      <div class="unit done" id="u-G2">
+        <div class="ut"><span class="uid">G2</span><span class="uname">排行榜</span><span class="pill p-ok"><span class="g">✓</span>已验收</span></div>
+        <div class="um">M3 · Day 3</div>
+        <div class="ua"><code>rank</code> 页显示榜单；自己上榜后能看到自己的名字</div>
+        <div class="ue"><span class="k">证据</span><a href="evidence/be-api-accept-LG.txt">evidence/be-api-accept-LG.txt</a><span class="self">· 非作者 be-api · 八段之一（g2）· CRIT 12/12</span></div>
+      </div>
+
+      <div class="unit done" id="u-G3">
+        <div class="ut"><span class="uid">G3</span><span class="uname">印章页（含灰态）</span><span class="pill p-ok"><span class="g">✓</span>已验收</span></div>
+        <div class="um">M3 · Day 3</div>
+        <div class="ua"><b>未得的章也显示</b>（灰态），不是只显示已得的</div>
+        <div class="ue"><span class="k">证据</span><a href="evidence/be-api-accept-LG.txt">evidence/be-api-accept-LG.txt</a><span class="self">· 非作者 be-api · 八段之一（g3）· CRIT 7/7</span></div>
+      </div>
+
+      <div class="unit done" id="u-G4">
+        <div class="ut"><span class="uid">G4</span><span class="uname">打卡与连击</span><span class="pill p-ok"><span class="g">✓</span>已验收</span></div>
+        <div class="um">M3 · Day 3</div>
+        <div class="ua">打卡后连击 +1；重复打卡幂等（一天一条）</div>
+        <div class="ue"><span class="k">证据</span><a href="evidence/be-api-accept-LG.txt">evidence/be-api-accept-LG.txt</a><span class="pass">· 非作者 be-api · 八段之一（g4）· CRIT 13/13</span></div>
+        <div class="ue"><span class="k">⚠ 更正</span><span class="self">上面那个 <b>13/13 出自旧量具</b>（<code>web.cjs</code> 73536 B／<code>081e1700…</code>），其中 <code>G4.n.db</code>／<code>G4.o.db</code> 两条读的是<b>另一个库</b>（<code>fx3</code>，而 8124 服务的是 <code>fx-render</code>）⇒ <b>恒真、零判别力</b>。缺陷由 <code>hanyu-dazi-ba</code> 指出，bd 复测确认后修（<code>web.cjs</code> v2 = 75197 B／<code>5b21c662…</code>，加了 <code>HD_API_DB</code> + <code>items≥300</code> 护栏），并用<b>变异测试</b>证明修对了（指回 <code>fx3</code> ⇒ <code>G4.n.db</code> 转红、EXIT=1）。<b>G4 的结论不变</b>：真正的幂等凭据是 API 级的 <code>G4.l.api.idem</code>（<code>created===false &amp;&amp; xpEarned===0</code>）与 <code>G4.j.streak2</code>／<code>G4.k.btn2</code>／<code>G4.m.api2</code>，那两条库级断言是<b>冗余</b>而非唯一依据。详见 <a href="evidence/g4-dbpath-fix.md">evidence/g4-dbpath-fix.md</a></span></div>
+      </div>
+
+      <div class="unit done" id="u-G5">
+        <div class="ut"><span class="uid">G5</span><span class="uname">PK 对战 + 分享链接</span><span class="pill p-ok"><span class="g">✓</span>已验收</span></div>
+        <div class="um">M4 · Day 4</div>
+        <div class="ua">分享链接 <code>/pages/duel/duel?code=xxx</code> <b>未登录能打开</b>（游客流程）</div>
+        <div class="ue"><span class="k">证据</span><a href="evidence/be-api-accept-LG.txt">evidence/be-api-accept-LG.txt</a><span class="self">· 非作者 be-api · 八段之一（g5）· CRIT 12/12</span></div>
+      </div>
+
+      <div class="unit done" id="u-G6">
+        <div class="ut"><span class="uid">G6</span><span class="uname">组队</span><span class="pill p-ok"><span class="g">✓</span>已验收</span></div>
+        <div class="um">M4 · Day 4</div>
+        <div class="ua">建队 / 入队能走通</div>
+        <div class="ue"><span class="k">证据</span><a href="evidence/be-api-accept-LG.txt">evidence/be-api-accept-LG.txt</a><span class="self">· 非作者 be-api · 八段之一（g6）· CRIT 16/16</span></div>
+        <div class="ue"><span class="k">⚠ 限定</span><span class="self">G6 的 <b>8 人上限</b>与 G5 的<b>过期语义</b>仍只有<b>作者自测</b>，非作者那一跑没逼到边界（见 <a href="fe-game.md">fe-game.md</a> 的补记）</span></div>
+      </div>
+
+      <div class="unit done" id="u-C1">
+        <div class="ut"><span class="uid">C1</span><span class="uname">40 个音频</span><span class="pill p-ok"><span class="g">✓</span>已验收</span></div>
+        <div class="um">M2 · Day 2</div>
+        <div class="ua"><code>content/audio/</code> 40 个 mp3；<code>count(*) from items where kind='listen'</code> = 40</div>
+        <div class="ue"><span class="k">证据</span><a href="evidence/content-audio.txt">evidence/content-audio.txt</a><span class="pass">· orchestrator（非作者）· 通过</span></div>
+        <div class="ue"><span class="k">308 重签</span><a href="evidence/fe-game-c1c4-nonauthor.txt">evidence/fe-game-c1c4-nonauthor.txt</a><span class="pass">· 非作者 <code>ba</code> 亲手跑（11:52–11:58）· <b>已验收（308 时点）</b> · listen 40 ／ audio_url 40/40 ／ 磁盘 mp3 40 ／ <b>HTTP 逐文件 40/40 字节+md5 全等</b></span></div>
+      </div>
+
+      <div class="unit done" id="u-C2">
+        <div class="ut"><span class="uid">C2</span><span class="uname">hint 入库</span><span class="pill p-ok"><span class="g">✓</span>已验收</span></div>
+        <div class="um">M2 · Day 2</div>
+        <div class="ua">答题反馈（<code>POST /attempts</code>）里出现 hint —— 契约口径是「反馈里出现」，不是「库里有」</div>
+        <div class="ue"><span class="k">证据</span><a href="evidence/content-hint-feedback.txt">evidence/content-hint-feedback.txt</a><span class="self">· content 自检 · 6/6 断言成立，exit 0</span></div>
+        <div class="ue"><span class="k">工具</span><code>scripts/check-hint-feedback.ts</code><span class="self">· 进程内起真服务走真 HTTP；变异 3/3 按预期转红或拒绝（exit 2/2/1）</span></div>
+        <div class="ue"><span class="k">非作者</span><span class="pass">be-api（非作者）在<b>另一只全新一次性库</b>上亲手复跑 · 通过</span></div>
+        <div class="ue"><span class="k">308 重签</span><a href="evidence/fe-game-c1c4-nonauthor.txt">evidence/fe-game-c1c4-nonauthor.txt</a><span class="pass">· 非作者 <code>ba</code> 亲手跑（11:52–11:58）· <b>已验收（308 时点）</b> · 6/6 断言 ✓、hint 与 <code>content.json</code> 逐字相同、<code>items.hint</code> 非空 308/308</span></div>
+        <div class="ue"><span class="k">读数</span><span class="self">答错/答对<b>都</b>带 hint，与 <code>content.json</code> 那一句、与库里 <code>items.hint</code> 逐字相同；后端复判 <code>isCorrect=false</code>（没信前端）；XP 2 / 10 与 constants 一致</span></div>
+        <div class="ue"><span class="k">守卫</span><span class="self">把 <code>DB_FILENAME</code> 指到一次性同名文件 → 脚本按名拒绝、退出码 <b>2</b>。那条「不碰共用库」不是注释里的承诺，是可复现的行为</span></div>
+      </div>
+
+      <div class="unit done" id="u-C3">
+        <div class="ut"><span class="uid">C3</span><span class="uname">印章定义种子</span><span class="pill p-ok"><span class="g">✓</span>已验收</span></div>
+        <div class="um">M3 · Day 3</div>
+        <div class="ua"><code>count(*) from achievements</code> = 15（§8 要求 ≥12）</div>
+        <div class="ue"><span class="k">证据</span><a href="evidence/content-stamps.txt">evidence/content-stamps.txt</a><span class="pass">· orchestrator（非作者）· 通过</span></div>
+        <div class="ue"><span class="k">补充</span><a href="evidence/content-stamps-reachability.txt">evidence/content-stamps-reachability.txt</a><span class="self">· content 自检 · 可达性 15/15，恒 false 0 枚</span></div>
+        <div class="ue"><span class="k">308 重签</span><a href="evidence/fe-game-c1c4-nonauthor.txt">evidence/fe-game-c1c4-nonauthor.txt</a><span class="pass">· 非作者 <code>ba</code> 亲手跑（11:52–11:58）· <b>已验收（308 时点）</b> · <code>achievements</code> 15（6/3/3/3）、恒 false 0 枚</span></div>
+      </div>
+
+      <div class="unit done" id="u-C4">
+        <div class="ut"><span class="uid">C4</span><span class="uname">内容扩量 + 幂等</span><span class="pill p-ok"><span class="g">✓</span>已验收</span></div>
+        <div class="um">M5 · Day 5</div>
+        <div class="ua">重跑导入两遍，第二遍「新增 0，更新 N」；<code>content.json</code> 合法且校验 0 错误</div>
+        <div class="ue"><span class="k">证据</span><a href="evidence/content-idempotency.txt">evidence/content-idempotency.txt</a><span class="self">· content 自检 · 全新库上跑 4 遍导入</span></div>
+        <div class="ue"><span class="k">读数</span><span class="self">第 2/3/4 遍一律「单元/课时/题目/印章 新增 0」· items 全表指纹 <code>46aa0ee9…</code> 三次不变 · audit exit 0、0 问题</span></div>
+        <div class="ue"><span class="k">读数</span><span class="self">只读查库 · 76 知识点（§8 要求 60–80）· 难度轴 basic 3 / advanced 2 / extended 1 · hint 296/296</span></div>
+        <div class="ue"><span class="k">非作者</span><span class="pass">be-api（非作者）在<b>另一只全新一次性库</b>上从零建库、连跑四遍 · 通过</span></div>
+        <div class="ue"><span class="k">308 重签</span><a href="evidence/fe-game-c1c4-nonauthor.txt">evidence/fe-game-c1c4-nonauthor.txt</a><span class="pass">· 非作者 <code>ba</code> 亲手跑（11:52–11:58）· <b>已验收（308 时点）</b> · <code>migrate</code> exit=0 ＋导入 #1 新增 6/20/308/15、<b>#2/#3/#4 逐字相同</b>、<code>content-audit</code> exit=0 校验和 <code>57b07b05756720b3</code></span></div>
+        <div class="ue"><span class="k">读数</span><span class="self">内容层独立复算：<code>id+point_key+kind+options+answer+sort+hint</code> 全表 md5 —— 第 3 遍后与第 4 遍导入后<b>都是</b> <code>46aa0ee9baa74492ad01cfb626ae50c9</code>，与作者记录逐字相同（是<b>复算</b>出来的，不是抄的）⇒ 选项、答案、题序都没退化</span></div>
+        <div class="ue"><span class="k">口径</span><span class="self"><b>2026-11-24 11:1x 补记（原先没写清，导致这个数一度被判「对不上」）</b>：<code>md5(JSON.stringify(select id, point_key, kind, options, answer, sort, hint from items order by id 的 .all()))</code>，键序 = select 列序、<code>options</code> 是原文 JSON 字符串。该口径下 <b>4 只互不相干的 296 库同得 <code>46aa0ee9…</code></b>（<code>fx</code> 07:28 · <code>fx3</code> 10:20 · <code>fx-be2</code> 10:25 · 验收库 <code>_c2c4.db</code> 02:42）⇒ 这个值<b>可复现、跨 8 小时稳定</b>，不是错数。同口径下 <b>308 = <code>bb1cb1d59274972cd0b264f53ae2f4f1</code></b>。⚠️ <code>c-recheck.cjs</code> 用的是另一个口径（<code>\u0001</code> 内分隔 + <code>\u0002</code> 行终结，同库 = <code>132052f7…</code>）—— <b>两个口径的数不可互比</b>。</span></div>
+      </div>
+
+      <div style="grid-column:1/-1;border:1px solid var(--ok);border-left:4px solid var(--ok);background:var(--ok-bg);border-radius:10px;padding:10px 14px">
+        <div style="font-family:var(--mono);font-size:10.5px;font-weight:700;color:var(--ok);letter-spacing:.08em;margin-bottom:4px">✓ 内容侧 C1–C4：四格已于 <b>308 时点</b>由非作者重签（11:52–11:58 落地）</div>
+        <details class="fold" style="margin-top:6px;box-shadow:none;background:transparent;border:0">
+          <summary style="font-size:11.5px">细则 · 边界 · 证据钉（点开看）</summary>
+          <div class="body"><div style="font-size:11.5px;color:var(--fg-2);line-height:1.6"><code>server/content/content.json</code> 于 <b>10:37:07</b> 被改（新增课时「四声辨调」）⇒ <code>items</code> <b>296→308</b>、<code>lessons</code> <b>19→20</b>、知识点 <b>76→80</b>，C1 / C2 / C4 的旧读数描述的是<b>写入前</b>那一刻的工作树（C3 本就无关）。按拍板③<b>不退回</b>；<b>缺口已在 11:52–11:58 由非作者 <code>ba</code> 了结</b> —— 它对 <code>server/content/**</code> 零字节，<b>未打开共用库</b>（自建一次性夹具 <code>server/data/_verify308.db</code>）、<b>未占 chromium 栈</b>（全程 node／tsx，C1 那一支的真 app 起在 58391 跑完即关），四格全部亲手重跑并落字<b>「已验收（308 时点）」</b>：C1 <code>kind='listen'</code> 40 ／ <code>audio_url</code> 40/40 ／ 磁盘 mp3 40 ／ <b>HTTP 逐文件 40/40 字节+md5 全等</b>（Content-Type 全集合 <code>["audio/mpeg"]</code>、404 兜底成立）；C2 6/6 断言 ✓、答错/答对都带 hint 且与 <code>content.json</code> 逐字相同、XP 2／10、<code>items.hint</code> 非空 <b>308/308</b>；C3 <code>achievements</code> 15（6/3/3/3）、恒 false <b>0 枚</b>；C4 <code>migrate</code> exit=0（5 迁移）＋导入 #1 新增 6/20/308/15、#2/#3/#4 <b>逐字相同</b>、<code>content-audit</code> exit=0 校验和 <code>57b07b05756720b3</code>。语料钉与 <code>57</code> 同一份（<code>content.json</code> md5 <code>39b48b8c…</code> / mtime 10:37:07）。<b>四格全部成立 ⇒ 「任何一格不过就退回」的承诺未触发。</b>记档：<code>PLAN/content.md</code>《308 基线重签》（追加节，<code>:8-13</code> 原表一字未动）＋ <a href="evidence/fe-game-c1c4-nonauthor.txt">evidence/fe-game-c1c4-nonauthor.txt</a>（含两个脚本全文）。<br><b>边界（不许读成已做）</b>：幂等只压到<b>行数层 + 口径 A/B 内容层</b>，<b>没有</b>逐字段 diff <code>options</code>／<code>answer</code>；<code>be.cjs:81</code> 的 <code>items=296</code> 重取不属本泳道、未做。<br><b>⚠️ 顺带更正一条误判</b>：先前把 C4 的旧指纹 <code>46aa0ee9…</code> 写成「作废」，<b>是错的</b> —— 它是<b>另一个口径</b>（<code>md5(JSON.stringify(rows))</code>）下的值，<b>可复现且跨 8 小时稳定</b>（四只互不相干的 296 库同得此值；<code>ba</code> 又在四只 296 库上独立复现了一次）⇒ 296 基线自 02:42 至 10:20 <b>逐字节未变</b>，296→308 的差<b>确定</b>来自语料扩容。两个口径不可互比，因为算法不同。口径已写进 <code>PLAN/content.md:87-103</code>。<br><b>证据件钉（12:09 复核）</b>：<a href="evidence/fe-game-c1c4-nonauthor.txt">evidence/fe-game-c1c4-nonauthor.txt</a> = <b>22811 B / md5 <code>9f50593e890bb303bf3a6fc4c0bdd381</code> / mtime 12:03:11</b>，作者（<code>ba</code>）已声明<b>冻结</b>。⚠️ 本轮更早一次读到的是 <b>21789 B / <code>c0035f6b…</code></b> —— 那是它补写 §十（「验收脚本不经过 Express 路由」那一段）<b>之前</b>的版本，<b>已作废、不要再引</b>；差额 1022 B、零删除，只有三处（§八·4 交叉指路 <code>§十</code>→<code>§九</code>、章序重排为 八→九→十、边界节追加事实块）。<b>凡引本件必须连 md5 一起引</b>。<br><b>12:12–12:14 新增两份台账（都不覆盖旧件，我已在盘上逐个复算过 md5）</b>：<a href="evidence/fe-game-c1c4-crosscheck-7d.txt">fe-game-c1c4-crosscheck-7d.txt</a>（<b>15458 B / md5 <code>e70632248d7bda8e9100d1e46d9b4c2a</code> / mtime 14:18:47</b>，作者 14:18:47 纯追加 <b>+1828 B 零删除</b>（新增 §十一，<b>闭合 §10.1</b>）—— <b>我已在盘上复算</b>；<b>⚠️ 作废链（四版，全部只增不删 ⇒ 只引现值）</b>：<code>13630 B / 241c948c…</code>（14:15:33，§十）→ <code>10515 B / 22660a72…</code>（12:18:54）→ <code>4721 B / b0d3cd7b…</code>（12:12:30）<b>全部作废，不要再引</b>。这已是本轮第四次「转述的指纹两分钟内过期」，故立规矩：<b>引证据件必连 md5 一起引，且引用者自己上盘复算</b>）= <code>7d</code> 在<b>自己的目录</b>另起 <code>readonly:true</code> 句柄独立复算四只库，<code>ba</code> 逐格复核<b>全部相同</b>（四只库 mtime 逐秒对上）—— 性质是<b>交叉复核，不是验收签字</b>，C1–C4 仍以本件为准。追加节把口径 A 从单源变多源（对口径 B 当时维持单源；该缺口当日 12:2x 由编排者补记录闭合，见本行末）：<b>口径 A 已有第二个来源且是「按记录复算」而非转述</b>（<code>7d</code> 照抄 <code>PLAN/content.md:87-103</code> 记的定义，非他人给的数；八只库复算后五只 296 全 <code>46aa0ee9…</code>、三只 308 全 <code>bb1cb1d5…</code>，键序八只全同）⇒ <b>296/308 值与键序三方对齐</b>（<code>ba</code> 12:1x ／ <code>7d</code> 12:2x ／ <code>content.md</code>）；<b>口径 B 12:2x 也补齐了</b> —— 原缺口是记录里<b>只写了分隔符</b>（<code>\u0001</code>/<code>\u0002</code>）、<b>没写列序／行序／空值表示／施用次序</b>，<b>不足复现</b>；<code>ba</code> 因此<b>拒绝交出实现</b>（照实现复算得同值只证明「读了同一份代码」，证不出「记录已足够复现」——那是把单源偷换成双源），<b>这条拒绝是对的，正确做法是补记录</b>。⇒ <b>编排者已把 B 的完整定义逐行补进 <code>PLAN/content.md</code>（编码自 <code>c-recheck.cjs:33-39</code>，脚本未动），并照该记录另写一份实现（写时未打开原脚本）在两支夹具库上复算：308 → <code>93fa59d1…</code>、296 → <code>132052f7…</code>，与记录逐字相同 ⇒ B 亦有第二来源。<b>14:1x 又补第三源</b>：<code>ba</code> <b>不采信转述</b>，自己照 <code>PLAN/content.md</code> 那段记录写了第三份实现（写时未打开 <code>c-recheck.cjs</code>、也未打开他自己的 <code>my-c14.cjs</code>），两值逐字命中 ⇒ <b>口径 B 现为三源，且三源全部「照记录」而非转述</b>，<code>c-recheck.cjs</code> 仍 <b>2431 B / 10:51:52 未动</b>（md5 <code>4dd5cc7ee80ad62cd1409bc3cbe1ab45</code>，由 <code>7d</code> 补、我已复算），<code>ba</code> 不交实现的立场已被证明是非必要的。</b>顺带一个真实生效的坑：两支库各有 <b>28 行</b> NULL（<b>只在 <code>options</code> 这一列</b>，正是 <code>stroke</code> 那 28 题；<code>answer</code> <b>从不为 NULL</b>），而本口径 `String(null)` === `'null'`，换个写法就得不到同一个值。<b>⚠️ 此处原文写作「<code>options</code>／<code>answer</code>」两列 —— 写宽了半格，14:2x 由 <code>ba</code> 指出、编排者上盘复算确认后已修</b>（四支库实测 <code>nullOptions=28</code>／<code>nullAnswer=0</code>／<code>nullHint=0</code>，全程 <code>readonly:true</code>，金值不受影响，但宽半格的散文会被后来者读成「两列都可能是 NULL」而多写一个分支）。<a href="evidence/fe-game-lane-pins.txt">fe-game-lane-pins.txt</a> = fe-game 把 §5 给它的全部 <b>17 个源件</b>逐个钉了 md5，证明<b>签字之后本泳道零写入</b>（最晚 mtime 早于签字约 65 分钟）⇒ G1–G6 的「已验收」未被后续改动作废。<b>⚠️ 本件 12:14:34 我曾记 <code>5299 B / edc6420b…</code>，作者 12:15:57 追加 §七后<b>已作废</b>；现盘上 = <b>8768 B / md5 <code>ccdc424137738dcfa55fdeca6ba6cd5d</code> / mtime 12:15:57</b>（纯追加 +3469 B，零删除），<u>我已在盘上复算</u>，<b>以这个为准</b>。</b>该件同时把两件事说清楚了：① 缺口<b>只是哈希</b>不是对象（见上条）；② <b>一条给部署波的硬约束</b>：<code>mobile/dist/build/h5/</code> 全部 40 个文件 mtime = <b>10:21:13</b>，而 <code>duel.vue</code> 的最后一次写入 = <b>10:33:24</b>（晚 12 分钟）⇒ <b>这份 dist 在时间上不可能包含 10:33 那次改动</b>，<b>部署波必须重打 H5</b>（<code>npm run build:h5</code>），不得直接搬这份 dist —— 否则会出现最难查的一种事故：<b>被验收的代码与部署的代码不是同一份</b>（dev 含改动、dist 不含）。<span class="self">（三条我已逐条上盘复测：40 文件 mtime、<code>duel.vue</code> 23146 B／10:33:24.776431900、<code>LG.txt:41-42</code> 确写 5173 dev。）</span></div></div>
+        </details>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ===================== 已了结 ===================== -->
+  <section class="sec">
+    <div class="sh">
+      <h2>本轮已了结</h2>
+      <span class="note">上一版挂在首屏等人拍板，现在都有结论了</span>
+    </div>
+    <div class="closed">
+
+      <div class="cd">
+        <div class="ct">
+          <span class="cn">R-01</span>
+          <span class="cq">已落定 · 改契约示例</span>
+        </div>
+        <h3><code>xpEarned</code>：契约的 28 改成 20，<b>代码不动</b></h3>
+        <div class="cs">代码本来就是对的 —— <code>attempts.ts</code> 的注释写明「<code>xpEarned</code> 只含课时奖励，打卡 XP 走 <code>checkin.xpEarned</code> 单独报」，实发就是 <code>XP_PER_LESSON</code> 一项。多出的 8 分「推进度奖励」<b>只存在于契约示例里</b>。</div>
+        <details>
+          <summary>落地动作</summary>
+          <div class="body">
+            <ul>
+              <li><code>CONTRACT.md</code> §4.2：<code>"xpEarned":28</code> → <code>20</code></li>
+              <li>注释改为「只有这一项，没有别的加成」</li>
+              <li>代码零改动，四路不必再各自猜这个数从哪来</li>
+            </ul>
+          </div>
+        </details>
+      </div>
+
+      <div class="cd">
+        <div class="ct">
+          <span class="cn">R-02</span>
+          <span class="cq">已落定 · 授权代清</span>
+        </div>
+        <h3>共用开发库已归零：13 行冒烟数据删净</h3>
+        <div class="cs">删的是泳道 fe-game 的探针残留账号 <code>feverify</code> —— 它在整个仓库里<b>只出现在本活页</b>，不是任何文档写明的固定夹具。全库只有两条外键（<code>items→lessons</code>、<code>lessons→units</code>），都不指向用户。</div>
+        <details>
+          <summary>落地动作</summary>
+          <div class="body">
+            <ul>
+              <li>删前<b>先把每一行原样存成回滚文件</b>（含 <code>rowid</code>，4.1 KB）</li>
+              <li>一个事务删净：<code>attempts</code> 3 · <code>xp_events</code> 5 · 另五张各 1，另加 <code>users</code> 1</li>
+              <li>复核：十张活动表<b>全部为 0</b>，只剩种子账号 <code>xiaoming</code></li>
+              <li>回滚文件在 <code>%TEMP%\hd-r02-rollback.json</code>，要复原随时可以</li>
+            </ul>
+          </div>
+        </details>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ===================== 附录 ===================== -->
+  <section class="sec">
+    <div class="sh">
+      <h2>附录 · 读数怎么来的</h2>
+      <span class="note">全部是跑过的命令与原始读数</span>
+    </div>
+
+    <details class="fold">
+      <summary>波次开闭检查（plan.html §十二·七）</summary>
+      <div class="body">
+        <p><b>开场：</b><code>8091</code> 上<b>恰好一个</b>监听进程，十张活动表全为 0。本次实测 —— 监听进程数 <b>1</b>（绿）；十张表最初 <b>7 张非零 / 13 行</b>（红），已按 R-02 处置。</p>
+        <ul>
+          <li>当时的非零表：<code>attempts</code> 3 · <code>xp_events</code> 5 · <code>checkins</code> 1 · <code>lesson_progress</code> 1 · <code>user_streaks</code> 1 · <code>duels</code> 1 · <code>reports</code> 1</li>
+          <li>当时为 0 的三张：<code>user_achievements</code> · <code>teams</code> · <code>team_members</code></li>
+          <li>13 行<b>全部</b> <code>user_id = 2</code> = <code>feverify</code>；种子账号 <code>xiaoming</code> 的活动行数为 0</li>
+          <li><b>21:54 复核：十张活动表全部为 0</b>，只余账号 <code>xiaoming</code> —— 开场条件达成</li>
+          <li><b>此后 22:3x，fe-learn 跑 L1–L5 取证，新增 <code>pf…</code> 账号（<code>users</code> id=4）</b>及其 <code>attempts</code> / <code>xp_events</code> / <code>checkins</code> / <code>user_streaks</code> / <code>lesson_progress</code> 等行。<b>开场条件当前不再成立</b> —— 需编排者按 §十二·十「按用户名前缀删净」重扫后再进验收波（见 <code>PLAN/evidence/fe-learn-l1-l5.txt</code> 末段）</li>
+          <li><b>22:49 重扫（be-api，只读）：6 张非零 / 共 42 行</b> —— <code>attempts</code> 15 · <code>xp_events</code> 19 · <code>lesson_progress</code> 3 · <code>checkins</code> 2 · <code>user_streaks</code> 2 · <code>reports</code> 1；<code>duels</code> / <code>user_achievements</code> / <code>teams</code> / <code>team_members</code> 仍为 0。行的时间戳全部落在 <code>22:30:47–22:36:44</code>，即 R-02 归零之后。</li>
+          <li><b>⚠️ 按 user_id 归属拆开看，账不是一个人欠的：<code>xiaoming</code>（id=1）21 行 · <code>pfd5c0q</code>（id=4）21 行</b>。<code>pfd5c0q</code> 是 fe-learn 的取证账号，可以用前缀删；<b>但 <code>xiaoming</code> 那 21 行挂的是种子账号</b>，前缀删法扫不到它 —— 其中 <code>reports</code> 1 行只可能来自 be-api 的 B5 断言（全仓唯一写 <code>reports</code> 的地方）。<b>be-api 自认这一笔</b>：本路<b>夹具之前</b>的第一版断言脚本直接打共用库，且当时用的 token 就是 <code>uid=1</code>，所以残留落在种子账号名下，而非 <code>beapi…</code> 前缀。</li>
+          <li><b>现行做法已修正</b>：be-api 的断言此后一律跑在<b>一次性夹具库</b>（自有进程 127.0.0.1:8099，全程不碰 <code>server/data/*.db</code>），见 <code>PLAN/evidence/be-api-B0-fixture.txt</code>。若 <code>xiaoming</code> 名下出现 22:46 之后的<b>新增</b>行，即可判定有别的写入源，因为夹具跑起来后再没写过共用库。</li>
+          <li><b>11:02 重扫（<code>hanyu-dazi-bd</code>，只读，WAL 一并可读）：<code>7/10</code> 张非零 / 共 <code>401</code> 行 —— 与 02:4x 那次逐表逐数完全相同</b>（<code>attempts</code> 188 · <code>xp_events</code> 197 · <code>lesson_progress</code> 7 · <code>checkins</code> 3 · <code>user_achievements</code> 3 · <code>user_streaks</code> 2 · <code>reports</code> 1；<code>duels</code> / <code>teams</code> / <code>team_members</code> 仍为 0）。<b>依据不是「看着像」</b>：<code>hanyu-dazi.db-wal</code> 的 mtime 仍是 <code>00:22</code>，即这 8 小时内共用库<b>一个字节都没写</b>；变动的只有「静默时长」，<b>00:22:03 → 11:02 ⇒ 10 小时 40 分</b>。所以本轮的验收工作<b>没往共用库里写过一个字节</b>（全在 <code>%TEMP%\hd-vfy\fx-*</code> 的一次性夹具上跑），这一格的两条结论都不变。</li>
+          <li><b>账号拆分未复核</b>：<code>380 + 20 + 1 = 401</code> 那套拆分是 02:4x 的读数，本次只复核了总行数与逐表行数（都一致），<b>没有重跑账号拆分</b>。</li>
+          <li><b><code>reports</code> 那一行经查证是 be-api 自己的</b>：<code>id=2</code>、<code>reporter_id=1</code>、<code>reason</code>=「验收自测举报」、<code>detail</code>=「be-api 本地断言用，非真实举报」、<code>2026-11-23 22:36:44</code>。它是 B5 断言<b>换成夹具之前</b>打的，所以落在种子账号名下。清场时这一笔由 be-api 一并认领。</li>
+        </ul>
+        <p><b>收场：</b>各泳道把自己造的冒烟数据<b>按用户名前缀删净</b>。这一条是被坑过才写进来的 —— 四条泳道共用一个本地库 <code>server/data/hanyu-dazi.db</code>。本次 <code>feverify</code> 前缀由 orchestrator 代清（见 R-02），删除前留有回滚文件。</p>
+      </div>
+    </details>
+
+    <details class="fold">
+      <summary>部署纪律与隔离边界</summary>
+      <div class="body">
+        <p>线上那台 <code>114.132.232.60</code>（<code>zj17z.cn</code>）跑着学校在用的 SmartCampus。本项目只以<b>独立租户</b>挂上去，绝不碰现有站点。</p>
+        <ul>
+          <li>独立子域 <code>hanyu.zj17z.cn</code>、独立端口 <code>8091</code>（只绑 <code>127.0.0.1</code>）、独立 PM2 进程 <code>hanyu-dazi</code>、独立库、独立 JWT 密钥</li>
+          <li>新 vhost 的软链名用一个字母序排在 <code>smartcampus-demo</code> <b>之后</b> 的名字（如 <code>zz-hanyu-dazi</code>），免得抢走 nginx 的兜底块</li>
+          <li>禁区：<code>pm2 stop all</code> / <code>delete all</code> / <code>kill</code> / <code>flush</code> 一律不用；<code>~/smartcampus</code>、<code>~/smartcampus-demo</code> 一个字都不动</li>
+          <li>传库前先停后端做 <code>PRAGMA wal_checkpoint(TRUNCATE)</code>，否则传上去的是旧数据</li>
+          <li>上线<b>不是</b>「重传现成 <code>dist/</code>」那一步 —— 本机产物一律是旧的，<b>必须先重打再传</b>（见下两条）</li>
+          <li><b>本机 dist 一律是旧产物，上线前四套必须重打</b>：先前那条说的是 11-23 15:36 的构建（缺 <code>lesson/practice/stroke</code> 三个 chunk）；<b>11-24 12:1x 复测更硬的一条</b> —— <code>mobile/dist/build/h5/</code> 全部 <b>40 个文件</b> mtime = <code>10:21:13</code>，而 <code>duel.vue</code> 最后写入 = <code>10:33:24</code>（晚 <b>12 分钟</b>）⇒ <b>这份产物在时间上不可能包含 10:33 那次改动</b>。在旧产物上 grep <code>jsdelivr</code> 得 0 是<b>空验</b>，不算「零 CDN」的证据。</li>
+          <li><b>⚠️ 一条比「产物旧」更根本的事实</b>：G1–G6 那轮验收打在 <code>127.0.0.1:5173</code>（<b>vite dev，实时编译当前源码</b>）上，<b>不是打在 dist 上</b>（<code>PLAN/evidence/be-api-accept-LG.txt:41-42</code>）⇒ 若直接搬现成 dist 部署，会出现最难查的一类事故：<b>被验收的代码与部署的代码不是同一份</b>（dev 含改动、dist 不含），而页面能开、接口 200，唯独线上缺那一笔。⇒ <b>部署波第一件事 = <code>npm run build:h5</code></b>。</li>
+          <li><b>部署前顺手补一个共同缺口</b>：「验收对象 = 这批字节」全线<b>只钉了量具与夹具</b>，产品源文件本轮只有字节数 + 纳秒 mtime、<b>没有 md5</b>（<code>LG.txt:99</code> 钉了四个改动源件的 B/mtime，已复测逐位相同）。fe-game 已补齐自己 §5 的 <b>17 个源件 md5</b>（<a href="evidence/fe-game-lane-pins.txt">fe-game-lane-pins.txt</a>）；<b>be-api 于 14:17 补上 <a href="evidence/be-api-lane-pins.txt">be-api-lane-pins.txt</a></b>（<b>14626 B / md5 <code>fde5d48a9dc9db3c820ec095fb6297d7</code> / mtime 14:23:34.547149300</b>；<b>⚠️ 作废链：<code>13680 B / cec5540f…</code>（14:21:27）、<code>11614 B / 93298314…</code>（14:17:31）均已作废，只引现值</b>。本件 14:2x 两更，14:21 那更只动两处 —— §二尾补「本表 = 写集全集、<code>find</code> 可复算」，§四把半 A 一句<b>过宽</b>的表述<b>收回原尺寸</b>（旧句「本泳道 <code>server/src/</code> 下其余文件全在这一半」<b>不成立</b>：该树下另有不属于 be-api 的新件），改为「半 A = 12 件、逐件列名」并划边界。<b>这次订正只降不升 —— 没有放宽任何口径，是把说过头的话收回</b>，由 <code>7d</code> 自查发现；14:23 那更再加「穷尽划分」一段、<b>未改任何既有读数</b>（<code>app.ts</code>／<code>routes/attempts.ts</code>／<code>services/checkin.ts</code> 三处抽验 md5 仍与 §二 表一致，我已复算）。<b>两更我都在盘上复算过</b>）—— <b>该侧缺口就此闭合，而且比 fe-game 那份还硬一格</b>：<code>7d</code> 不只钉了 13 件，这 13 件<b>正好是该泳道写集的全集</b>（我用 <code>find</code> 独立列过：<code>services/**</code> 排 <code>seeds/</code> ＋ 四支 route ＋ <code>routes/index.ts</code> ＋ <code>app.ts</code> ＋ 那份 reports 迁移 = <b>13 件，一件不多一件不少</b>），且 <b>13 件 md5 我逐件上盘复算，全部命中</b>，字节数与纳秒 mtime 也对上；<b>半 A = 12 件亦由我逐件 <code>git diff --quiet HEAD</code> 复算，与作者清单逐字相同</b>；整窗 <b>11-23 16:49:23 → 16:58:58</b>（跨度 9 分 35 秒）⇒ <b>Day 2 零写入</b>。所以这条缺口的性质再改一次口：<b>不是「对象不符、只缺哈希」，而是「对象既符、哈希也在」</b> —— 验收对象与部署对象是同一批字节。<b>⚠️ 11-24 19:1x 局部作废（只废一件，不动全盘）</b>：此断言对 be-api 那 13 件里的 <b>1 件</b>（<code>services/checkin.ts</code>）<b>不再成立</b> —— CR-01 修复把它从 <code>7cd731e3…</code> 改成 <code>74b4e33a…</code>，<b>部署上去的那批字节不在 11:0x–11:20 验收所签的那棵树上</b>；其余 33 件（半 A 12 ＋ 半 B 其余 12 ＋ 边界 9）一字未动，<b>12 / 13 / 9 = 34 与穷尽划分一律不变</b>，只有那一格哈希换值。随之作废的是 <code>be-api-lane-pins.txt</code> 的 <b>§二第 79 行</b>与 <b>§三「结论一」整节</b>（含「Day 2 零写入」）；按其 §七「只增不删」我不动该件一个字节，作废声明记在 <a href="evidence/cr01-checkin-fix-and-voided-pins.txt">evidence/cr01-checkin-fix-and-voided-pins.txt</a>。本 <code>&lt;li&gt;</code> 前段其余读数（13 件全集、逐件复算、34 件穷尽划分）<b>仍然有效</b>。<span class="self">（非作者 <code>ba</code> 随后把这批件复算了一遍，<b>13/13、半 A 12/12、边界 9 件无一遗漏无误列</b>，并把「13 件是全集」加练成<b>穷尽划分</b>：<code>git</code> 实测整棵 <code>server/src</code> = 14 tracked ＋ 20 untracked ＝ <b>34 件</b>，be-api 25 件（半 A 12 ＋ 半 B 13）＋ 非 be-api 9 件 ＝ 34 ⇒ <b>没有第五类、不留灰区</b>；<b>这条加法我独立复算过（14/20 两个数我自己 <code>git ls-files</code> 得到，12 与 9 两份清单逐件比过）</b>。落字在 <a href="evidence/fe-game-nonauthor-7d-lanepins.txt">evidence/fe-game-nonauthor-7d-lanepins.txt</a> = <b>10673 B / md5 <code>19271756a985da06ec71174c6b6918b1</code> / mtime 14:23:35.065880100</b>，它自己在 §九 写明<b>这不是验收签字、只说「读数可复算」</b> —— 我按这个口径引。<b>⚠️ 该件 §二 记的是 be-api 件的上一版 <code>13680 B / cec5540f…</code>，已被 14:23:34 的 <code>14626 B</code> 取代</b>，引该件时须知这一层。）</span>§三「两半法」亦核准（半 A = <code>028de6a</code> 中零改动的 12 件，由提交哈希锚住；半 B = 这 13 件，逐件钉 md5；合起来整份可复算）。<b>剩下 fe-learn 与 content 两条未补</b>。<br><span class="self">（另一条旁证，顺手记：<code>utils/code.ts</code>／<code>utils/week.ts</code>／<code>constants/index.ts</code> 三件 mtime = <b>11-23 16:42</b>，早于上列 13 件的 16:49–16:58 ⇒ <b>波次 0 冻结在 16:42、各泳道文件全落在其后</b>，与「先有冻结件、后有依赖它的泳道件」的归属裁定在时间上自洽。<code>7d</code> 另拒领我原提议的「替别家钉源件」派活，理由是「替别家钉就等于从非作者变成那批字节的记录人，验收资格反被搅浑」—— <b>这条理由成立，我撤回该派活</b>，其余泳道的钉子由各自泳道或由我落。）</span></li>
+          <li><b>文件归属的一处真空洞（14:1x 补记）</b>：§5 原表把 <code>server/src/utils/**</code> 与 <code>constants/**</code> 在四行里都写成「其余全部」，<b>读起来像「无人所有」</b>，于是真出现了实例：<code>utils/code.ts</code>、<code>utils/week.ts</code> <b>被 fe-game 与 be-api 两边同时 import</b>（<code>routes/duel.ts</code>／<code>team.ts</code>／<code>xp.ts</code> 与 <code>services/rank.ts</code>／<code>services/xp.ts</code>），<b>而 §5 没有一行授权谁建它</b>。已裁定这四件（另含 <code>routes/auth.ts</code>）为<b>编排者所有、波次 0 冻结、只读不改</b>，要改先走 §7 变更请求，并已补进 <code>CONTRACT.md</code> §5。判据 = <b>文件头自陈</b>（「波次 0 冻结，编排者所有，agent 只读不改」）+ 无人认领；<b>mtime 只能证何时、证不了何人</b>，如实记。不划给任何泳道的理由：划给一边，另一边就依赖一个自己不能改的文件 —— 那正是 §5 想避免的耦合。</li>
+        </ul>
+        <p>上线验收：<code>https://hanyu.zj17z.cn/</code> 必须 200，同时 <code>zj17z.cn</code> 与 <code>demo.zj17z.cn</code> 也还是 200。<br><b>⚠️ 19:1x 实况：这一条本波<u>未达成</u>，而原因不在部署。</b><code>hanyu.zj17z.cn</code> 解析 = <b>NXDOMAIN</b>（<code>nslookup hanyu.zj17z.cn 1.1.1.1</code> → Non-existent domain；父域 <code>zj17z.cn</code> 正常 → 114.132.232.60）⇒ 域名根本不可达，<code>https://hanyu.zj17z.cn/</code> 返回 <b>000</b>，因此 nginx 这一步只按 <b>HTTP</b> 上（未加 <code>--certbot</code>）。服务器侧路由<b>已证正常</b>：<code>Host: hanyu.zj17z.cn</code> 直连 → <b>200</b> 且回 <code>{"app":"hanyu-dazi","status":"up"}</code>。<b>待你加一条 A 记录 <code>hanyu.zj17z.cn → 114.132.232.60</code> 后，跑 <code>python -I tools/deploy-hanyu.py --certbot</code> 即可补完 HTTPS 并把本行验收跑绿。</b>另两条仍为 200，已实测。</p>
+      </div>
+    </details>
+
+    <details class="fold">
+      <summary>验收断言怎么跑才算数</summary>
+      <div class="body">
+        <p>「已验收」不许自己写。验收断言必须由<b>没写这段代码的一方</b>亲手跑过：</p>
+        <ul>
+          <li><b>后端</b>用 <code>curl</code> 断言 HTTP 码、<code>code</code> 与关键字段值</li>
+          <li><b>前端</b>用浏览器<b>硬断言</b>，以 <code>getBoundingClientRect()</code> 与 <code>elementFromPoint()</code> 为准</li>
+          <li><b>不用</b>那种会「自动滚动重试」的点击工具 —— 按钮在屏幕外它照样报成功，等于假通过</li>
+        </ul>
+        <p>证据落在 <code>PLAN/evidence/</code>，每条写清：单元、验收标准、验收人（须是非作者）、时间、结论。</p>
+      </div>
+    </details>
+
+    <details class="fold">
+      <summary>读数的身份怎么判（14:2x 立，第二次撞上才写进来）</summary>
+      <div class="body">
+        <p><b>判「是不是同一份文件」，只认 字节数 ＋ md5；<code>mtime</code> 只作时序辅证；<code>行数</code>不作任何判据，消息里也不必报。</b></p>
+        <ul>
+          <li><b>第一次撞上 —— 同一文件，两种数法差近一倍</b>：<code>PLAN/content.md</code>，<code>wc -l</code>／<code>awk END{NR}</code>／<code>grep -c ''</code> 三法同为 <b>282</b>，而 PowerShell <code>Measure-Object -Line</code> 为 <b>143</b>（不计空行）。<b>字节完全相同</b>，是同一份文件 —— 差异全在「数什么」。</li>
+          <li><b>第二次撞上（14:2x）：同一份件，三种数法</b>。这条<b>量具分歧尚未定论</b>（一方报 241 行、另一方报 156 行／127 行，谁的量具偏还没查到根），<b>所以此处只立规矩、不列谁对</b> —— 但这恰好是「行数不能当判据」的现场实证：连「这份件有多长」都说不拢，何况拿它当身份。</li>
+          <li><b>实做规矩</b>：本轮所有引证据件<b>一律连 md5 一起引</b>（12:1x 已立），且<b>引用者自己上盘复算</b>；活页里凡钉件只写「字节 ＋ md5 ＋ mtime」，<b>不再写行数</b>（14:23 起，本页上述各件已照此改）。</li>
+          <li><b>反面教材</b>：把行数当「同一个件」的判据 —— 2026-11-24 当天两次误判，两次都是同一份文件被判成两份。</li>
+        </ul>
+      </div>
+    </details>
+
+    <details class="fold">
+      <summary>content 自检工具（两个脚本，退出码就是断言）</summary>
+      <div class="body">
+        <p>这两条不是测试框架，是<b>能当断言用的脚本</b> —— 退出码非 0 就代表发现了「永远灰着、且不报任何错」的章。全部跑在<b>一次性库</b>上，不碰共用开发库。</p>
+        <ul>
+          <li><code>server/scripts/check-stamps.ts</code> —— <b>静态可达性</b>：逐枚印章解析判定源，验它取得到、且能取到值。当前读数 <b>15/15 命中，恒 false 0 枚，退出码 0</b>。<b>改过 <code>content.json</code> 的单元结构或印章种子之后都要重跑。</b></li>
+          <li><b>它的价值在于零描红陷阱是擦边避开的</b>：<code>unit-basic-sentence</code> / <code>unit-advanced-word-city</code> / <code>unit-extended-dialogue-daily</code> 三个单元一道描红题都没有，而 <code>unitAllStrokesCorrect()</code> 在题数为 0 时直接 <code>return false</code> —— 将来谁把 stroke 章挪到零描红单元上，那枚章就永远发不出来。本自检会当场转红。</li>
+          <li><code>server/scripts/check-streak-timing.ts</code> —— <b>CR-01 的复现兼验收</b>：A 场景（打卡当场是否发章）修好后自动转绿。<b>现退出码 0</b>（19:1x 修复后实测；修前基线为 <b>1</b>，两条读数都在 <a href="evidence/cr01-checkin-fix-and-voided-pins.txt">evidence/cr01-checkin-fix-and-voided-pins.txt</a> §四 —— 这两条都是<b>作者自证</b>，本行只记读数，不据此落「已验收」）。⚠️ <b>这句话只在落点 = <code>services/checkin.ts</code> 的 <code>touch()</code> 内时成立</b> —— 该脚本 <code>:24/:25/:77</code> 直接 import service、<b>不经过 Express</b>，修在 <code>routes/checkin.ts</code> 它照样是 1（见 CR-01 卡）。</li>
+          <li><b>跑法（一次性库）</b>：<code>rm -f data/_verify.db*</code> → <code>DB_FILENAME=./data/_verify.db npx tsx src/migrate.ts</code> → <code>DB_FILENAME=./data/_verify.db npx tsx scripts/import-content.ts</code> → <code>DB_FILENAME=./data/_verify.db npx tsx scripts/check-stamps.ts</code></li>
+          <li><b>自检本身做过变异反证</b>：故意造两处「恒 false」（一枚章的 <code>ref_key</code> 指向不存在的单元、一枚章的 <code>threshold</code> 置 NULL），<code>check-stamps.ts</code> 恰好报 <b>2 条 ⚠ 且退出码 1</b> —— 证明它真的会转红，不是一个永远打勾的自检。</li>
+        </ul>
+      </div>
+    </details>
+  </section>
+
+  <footer>
+    <div class="chain">
+      <b>真源顺序</b>
+      <span class="bx">plan.html<span style="color:var(--fg-3)"> 规则与验收口径 · 低频</span></span>
+      <span class="ar">→</span>
+      <span class="bx">PLAN/&lt;泳道&gt;.md<span style="color:var(--fg-3)"> 状态 · 高频</span></span>
+      <span class="ar">→</span>
+      <span class="bx here">本页<span style="color:var(--fg-3)"> 视图 · 不存状态</span></span>
+    </div>
+    <p>本页只是 <code>PLAN/</code> 下四个状态文件的视图，<b>它自己不存任何状态</b> —— 网页没了可以重建，状态没了就真没了。读数截至 2026-11-24 11:02，状态一动就重新生成一次。规则原文在 <code>plan.html</code> §十二·七。</p>
+  </footer>
+
+</div>
+
+<script>
+(function(){
+  var btn = document.getElementById('tgl');
+  var root = document.documentElement;
+  function label(){ btn.textContent = root.dataset.theme === 'light' ? '深色' : '浅色'; }
+  label();
+  btn.addEventListener('click', function(){
+    root.dataset.theme = root.dataset.theme === 'light' ? 'dark' : 'light';
+    try{ localStorage.setItem('hd-progress-theme', root.dataset.theme); }catch(e){}
+    label();
+  });
+})();
+</script>
+</body>
+</html>

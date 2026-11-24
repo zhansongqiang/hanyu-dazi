@@ -1,0 +1,91 @@
+# 证据 · CR-01 复现 —— streak 章「结算时机」缺陷
+
+单元：无（跨泳道接口问题；不改任何单元的验收状态）
+上报：content → 编排者（契约 §7 CHANGE-REQUEST，格式见下）
+出证人：content（复现方）
+时间：2026-11-23
+结论：**缺陷复现成立** —— 打卡写路径不结算印章，streak 章可能永久拿不到
+
+## 命题
+
+`current_streak` 是四类印章判定源里**唯一会倒退**的那个：
+`lesson_progress.status` 不回退、`attempts` 只增、`totalXp` 只增，唯独断签后 `current_streak` 归 1。
+
+契约 §4.7 明文规定 streak 章按 `current_streak >= threshold` 判定，而契约目前只在
+`POST /attempts`（`routes/attempts.ts:178`）与 `POST /lessons/:id/finish` 内部结算印章，
+**打卡写路径 `POST /checkin` → `services/checkin.touch()` 不结算** ——
+可打卡恰恰是**唯一会把 `current_streak` 推过阈值**的动作。
+
+## 复现（一次性库，不碰共用库）
+
+    $ DB_FILENAME=./data/_verify.db npx tsx src/migrate.ts
+    $ DB_FILENAME=./data/_verify.db npx tsx scripts/import-content.ts
+    $ DB_FILENAME=./data/_verify.db npx tsx scripts/check-streak-timing.ts
+    EXIT=1
+
+输出：
+
+    streak 章定义： streak-3(≥3)  streak-7(≥7)  streak-14(≥14)
+
+    A. 打卡：连击 2 → 3，XP +5
+       ⚠ FAIL —— 连击已到 3，打卡后却没发 streak-3（打卡路径不结算印章）
+
+    B. 事后调 evaluate()（缓解路径）：新解锁 = streak-3
+       此刻手上的 streak 章： streak-3
+       → 若 A 是 FAIL，则 streak 章只能靠「用户之后还做点别的」来补发，打卡本身不负责
+
+    C. 曾连续 3 天但当时没人结算，之后断签（last=2026-11-20）再打卡：
+       touch() 把连击打回 1（max_streak 仍记着 3）
+       再 evaluate() 后手上的 streak 章：（无）  ← 永久拿不到，尽管确实连续过 3 天
+
+    结论：缺陷仍在（A 未通过）
+
+## 三段的读法
+
+- **A 与 B 是单变量对照**：同一个用户、同一个库，唯一差别就是 A 之后**有没有**多跑一次
+  `evaluate()`。B 拿到了 `streak-3` ⇒ 缺的**只是那句结算**，判定规则本身没问题。
+- **B 同时是「修好后预期」的证据**：把 `evaluate()` 挪进打卡写入路径，行为就是 B ——
+  A 场景会自动转绿。修复后重跑本脚本，退出码应从 **1 变 0**（脚本就是按这个断言写的）。
+- **C 是缺陷的最重形态**：条件满足那一刻没人结算，等下一次有人结算时 `current_streak`
+  已归 1，于是**永久不可达** —— 而 `max_streak` 里明明记着 3。
+
+## 为什么其他三类章不受影响
+
+迟结算对它们只是「晚点拿到」，不会「拿不到」：
+
+| 章 | 判定源 | 会倒退吗 | 迟结算的后果 |
+|---|---|---|---|
+| `unit` | `lesson_progress.status` | 否（完成后不回退） | 晚点拿到 |
+| `stroke` | 「是否答对过」 | 否（只增） | 晚点拿到 |
+| `xp` | `totalXp` | 否（只增；重复作答每次都发 XP，`services/attempt.ts:95-101` 无去重） | 晚点拿到 |
+| **`streak`** | **`current_streak`** | **是（断签归 1）** | **可能永久拿不到** |
+
+⇒ 四类里只有 streak 会在写路径的缺口上**永久漏章**。
+
+## CHANGE-REQUEST（§7 格式）
+
+    section: 4.7
+    what: POST /checkin 打卡之后也要结算一次印章（或让 services/checkin.touch() 顺带结算）
+    why: 契约 §4.7 规定 streak 章按 current_streak >= threshold 判定，而 current_streak 是
+          四类印章判定源里唯一会倒退的（lesson_progress.status 不回退、attempts 只增、
+          totalXp 只增，唯 current_streak 断签即归 1）。契约目前只在 POST /attempts 和
+          POST /lessons/:id/finish 内部结算，打卡写路径 POST /checkin 不结算 —— 而打卡
+          恰恰是唯一会把 current_streak 推过阈值的动作。
+          后果（已在隔离库复现）：「连续 3 天只打卡」的用户，第 3 天连击到 3 的那一刻无人
+          结算；等第 4 天断签后才有人结算时 current 已归 1，streak-3 永久发不出去，
+          而 max_streak 里明明记着 3。接口 200、日志干净、页面只是灰着。
+    建议: 最小改法是在 routes/checkin.ts 的 handle 里 touch() 之后补一次
+          await evaluateStamps(userId)（与 routes/attempts.ts:178 同一写法），语义上
+          不需要改 §4.7 的判定规则。
+
+**归属**：`src/routes/checkin.ts` 在 fe-game 写集，`src/services/checkin.ts` 在 be-api 写集。
+content 按 §5「只写自己的文件」不动它们，落点由编排者定。
+
+## 附带观察（不构成请求，供编排者排期时参考）
+
+- `POST /stamps/check` 是主动结算，但 `mobile/src/pages/stamp/stamp.vue` 的 `doCheck()` 是
+  **手动按钮**，不是 onShow 自动跑；`profile.vue` 的 `doCheckin()` 也只调 `checkinApi.check()`，
+  **没有**跟一次 `stampApi.check()`。也就是说：今天用户「打了卡、连击到 3」之后，
+  除非他接着答一道题 / 完成一节课 / 手动点印章页的结算按钮，否则那枚章不会出现。
+- `POST /checkin` 的响应体（`CheckinResult`）**没有** `badges` 字段，所以打卡路径即使结算了
+  也**没地方回传**新章。要不要一起动，取决于编排者对 §4.6 返回结构的取舍（be-api 写集）。

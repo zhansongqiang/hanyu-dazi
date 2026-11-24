@@ -1,0 +1,82 @@
+# 证据 · C3 补充 —— 印章不只「在库里」，还得「拿得到」
+
+单元：C3 印章定义种子（泳道 content，里程碑 M3，计划 Day 3）
+本补充件的验收标准：15 枚印章的判定源**全部可达** —— 不存在「永远灰着、且不报任何错」的章
+出证人：content（**作者自检**，不是验收；「已验收」仍只能由非作者写）
+时间：2026-11-23
+结论：**15/15 命中，恒 false 的 0 枚**
+
+## 为什么这条值得单独出一份证据
+
+C3 的验收标准是 `count(*) from achievements = 15` —— 它只数了**有没有**，没管**拿不拿得到**。
+而判定写在 be-api 的 `services/stamps.ts` 里，四类各有一个「恒 false」入口，
+一旦踩中就是：接口一律 200、日志一律干净、用户练一辈子也拿不到，页面上只是灰着。
+这种失败没有任何运行时报错能抓到，只能靠静态比对。所以补跑一次。
+
+## 命令 1 —— 自检（一次性库上跑，不碰共用库）
+
+    $ rm -f data/_verify.db*
+    $ DB_FILENAME=./data/_verify.db npx tsx src/migrate.ts
+    $ DB_FILENAME=./data/_verify.db npx tsx scripts/import-content.ts   # 顺带 seed 15 枚印章
+    $ DB_FILENAME=./data/_verify.db npx tsx scripts/check-stamps.ts
+    EXIT=0
+
+输出：
+
+      unit    unit-basic-char                命中「basic-char」（课时 3／描红 12／听音 12）
+      unit    unit-basic-word                命中「basic-word」（课时 4／描红 4／听音 16）
+      unit    unit-basic-sentence            命中「basic-sentence」（课时 3／描红 0／听音 12）
+      unit    unit-advanced-char-radical     命中「advanced-char-radical」（课时 3／描红 12／听音 0）
+      unit    unit-advanced-word-city        命中「advanced-word-city」（课时 3／描红 0／听音 0）
+      unit    unit-extended-dialogue-daily   命中「extended-dialogue-daily」（课时 3／描红 0／听音 0）
+      stroke  stroke-basic-char              命中「basic-char」（课时 3／描红 12／听音 12）
+      stroke  stroke-basic-word              命中「basic-word」（课时 4／描红 4／听音 16）
+      stroke  stroke-advanced-char-radical   命中「advanced-char-radical」（课时 3／描红 12／听音 0）
+      streak  streak-3                       threshold 3
+      streak  streak-7                       threshold 7
+      streak  streak-14                      threshold 14
+      xp      xp-500                         threshold 500
+      xp      xp-1500                        threshold 1500
+      xp      xp-3000                        threshold 3000
+
+    印章 15 枚，恒 false 的 0 枚
+    库里单元 6 个：advanced-char-radical, advanced-word-city, basic-char, basic-sentence, basic-word, extended-dialogue-daily
+
+## 命令 2 —— 零描红陷阱是擦边避开的，不是结构上不可能
+
+`unit-basic-sentence` / `unit-advanced-word-city` / `unit-extended-dialogue-daily` 三个单元
+**一道描红题都没有**（描红 0）。而 `unitAllStrokesCorrect()` 在 `itemIds.length === 0` 时直接
+`return false` —— 也就是说，**只要有 stroke 章落在三者中的任何一个上，那枚章就永远发不出来**。
+实际三枚 stroke 章分别落在 `basic-char` / `basic-word` / `advanced-char-radical`，
+描红数 12 / 4 / 12，**全部 > 0**。
+
+⇒ 这条要留读数：将来谁把某个单元的描红题删空，或把 stroke 章挪到零描红单元上，
+本自检会转红。**改过 `content.json` 的单元结构或 `seeds/stamps.seed.ts` 之后都要重跑。**
+
+## 命令 3 —— 变异反证：这个自检真的会转红（不是「永远绿」）
+
+一个只会打勾的自检等于没有自检。故意造两个必抓的目标 —— 在**一次性库**上执行两条 SQL：
+
+    UPDATE achievements SET ref_key='no-such-unit' WHERE code='stroke-basic-word';  -- 改动 1 行
+    UPDATE achievements SET threshold=NULL          WHERE code='xp-500';            -- 改动 1 行
+
+    $ DB_FILENAME=./data/_verify.db npx tsx scripts/check-stamps.ts
+    ⚠ stroke  stroke-basic-word              单元「no-such-unit」不在库里 → 恒 false
+    ⚠ xp      xp-500                         threshold 为空 → 恒 false
+    印章 15 枚，恒 false 的 2 枚
+    EXIT=1
+
+恰好两条 ⚠、退出码 1 —— 判别力得到证明。
+
+**变异器刻意不放进仓库**：它会破坏性地改写印章定义，而 `server/scripts/` 下就有
+`import-content.ts` 这类日常会被指向共用开发库的脚本 —— 放在旁边就是个脚踝雷。
+上面两条 SQL 就是它的全部内容，用任何 SQLite 客户端都能复现。
+**只许指向 `data/_verify.db` 这类一次性库，绝不许指向 `server/data/hanyu-dazi.db`。**
+
+## 仍未验的部分
+
+- **不含行为验**：本件只证明判定源「可达」，**不**证明「到了阈值真的发得出来」。
+  后者要写库实测，属验收波。
+- **本件的「0 枚恒 false」不覆盖 CR-01**：`streak` 章另有一处**结算时机**缺陷
+  （打卡写路径不结算），那是「源可达、但可能错过窗口」，不是「源不可达」，
+  已单独上报，见 `evidence/content-streak-timing.txt`。
