@@ -15,7 +15,7 @@ How to read the three outcomes:
             group) does NOT allow this port. Tencent denies by dropping, not
             by rejecting, so a timeout is the signature of a missing rule.
 
-Why this matters for THIS host (114.132.232.60 / zj17z.cn): ufw is active and
+Why this matters for THIS host (zj17z.cn): ufw is active and
 allows only 22, 80, 443. The plan deliberately avoids opening anything else,
 so the expected reading is:
 
@@ -31,7 +31,8 @@ Usage:  python check-ports.py [port ...]
 import socket
 import sys
 
-HOST = "114.132.232.60"
+# 不写死裸 IP：走域名解析（仓库公开，不留服务器地址清单）
+HOST = "hanyu.zj17z.cn"
 DEFAULT_PORTS = [22, 80, 443, 8080, 8082, 8091, 3306]
 TIMEOUT = 5.0
 

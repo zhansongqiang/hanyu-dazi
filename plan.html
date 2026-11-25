@@ -422,7 +422,7 @@ details pre{
     <li><span class="idx">10</span><span><span class="what">发音音频预生成 mp3；「说」这一块 v1 争取做成跟读录音 + 回放自评</span><span class="why">不用运行时浏览器语音合成：安卓 WebView 支持不全、中文本地音色不稳定，演示会翻车。跟读录音则做成<strong>录 → 存 → 回放 → 自评</strong>四步，麦克风的两头条件本来就都具备：本地开发时 <code>localhost</code> / <code>127.0.0.1</code> 本身就是安全上下文，上线后入口又是 <code>https://</code>。仍然<strong>不做</strong>的是「智能评分」——不接语音识别服务，判对错的是学习者的耳朵，不是算法，这样评分口径不需要设计，也不引入外部依赖。作为本版唯一的<strong>争取项</strong>，它排在收尾日、主线之后，进度紧就整体让位。理由与排期见第十二节第五点。</span></span></li>
     <li><span class="idx">11</span><span><span class="what">内容口径：对齐 HSK 3.0 三等九级框架，首版是样本切片</span><span class="why">不硬吹「完整课程」。见第八节的答辩原话。</span></span></li>
     <li><span class="idx">12</span><span><span class="what">视觉：宣纸 / 朱砂 / 墨 / 泥金，宋体标题，回纹点缀</span><span class="why">中国元素靠材质和留白，不靠堆砌龙纹祥云。</span></span></li>
-    <li><span class="idx">13</span><span><span class="what">开发全在本地，上线是第二阶段，挂 <code>zj17z.cn</code>（114.132.232.60）的子域名</span><span class="why">开发阶段不碰服务器：本机起 Express <code>8091</code> + SQLite + Vite 热更新，改一行就看得见。上线那天挂在自己的子域名 <code>hanyu.zj17z.cn</code> 上——这台机器跑着 SmartCampus 的生产环境（PM2 <code>smartcampus</code> 占 8080、<code>smartcampus-demo</code> 占 8082），学校在用它，所以我们只做加法：独立目录、独立端口、独立 PM2 名、独立 nginx vhost、独立数据库文件，一个都不重叠。机器上 certbot 与自动续期都是现成的。链路在 Day 1 晚上先走通一次空壳，之后每次上线只是重传构建产物。</span></span></li>
+    <li><span class="idx">13</span><span><span class="what">开发全在本地，上线是第二阶段，挂 <code>zj17z.cn</code>（[服务器IP]）的子域名</span><span class="why">开发阶段不碰服务器：本机起 Express <code>8091</code> + SQLite + Vite 热更新，改一行就看得见。上线那天挂在自己的子域名 <code>hanyu.zj17z.cn</code> 上——这台机器跑着 SmartCampus 的生产环境（PM2 <code>smartcampus</code> 占 8080、<code>smartcampus-demo</code> 占 8082），学校在用它，所以我们只做加法：独立目录、独立端口、独立 PM2 名、独立 nginx vhost、独立数据库文件，一个都不重叠。机器上 certbot 与自动续期都是现成的。链路在 Day 1 晚上先走通一次空壳，之后每次上线只是重传构建产物。</span></span></li>
     <li><span class="idx">14</span><span><span class="what">社交安全：举报入口 + 好友限定私信 + 未成年人默认关闭</span><span class="why">有真人社交就必须有这套设计，v1 只做举报与用户资料，不做聊天。</span></span></li>
     <li><span class="idx">15</span><span><span class="what">策略：宽度优先，每天一个能演示的里程碑</span><span class="why">宁可砍功能，不砍闭环。断链的功能比少一个功能更伤答辩。</span></span></li>
   </ol>
@@ -752,7 +752,7 @@ CREATE INDEX idx_recordings_user ON recordings(user_id, item_id);
         <ul>
           <li>上午：拷贝 <code>mobile/</code> 与 <code>server/</code> 到新项目，换品牌、换配色变量；本机起 Express <code>:8091</code> + Vite dev，<code>http://localhost:5173</code> 看到自己的壳子</li>
           <li>下午：写 <code>units</code> / <code>lessons</code> / <code>items</code> / <code>attempts</code> / <code>lesson_progress</code> / <code>duels</code> / <code>xp_events</code> 七张表的迁移；整理 <code>content.json</code>，基础级 40 个知识点先落盘</li>
-          <li>晚上（约 40 分钟）：把整条上线链路走通一遍——DNSPod 加 A 记录 <code>hanyu</code> → <code>114.132.232.60</code>，新增独立 nginx vhost，<code>certbot --nginx</code> 签下 <code>hanyu.zj17z.cn</code>，PM2 以 <code>hanyu-dazi</code> 起 <code>8091</code></li>
+          <li>晚上（约 40 分钟）：把整条上线链路走通一遍——DNSPod 加 A 记录 <code>hanyu</code> → <code>[服务器IP]</code>，新增独立 nginx vhost，<code>certbot --nginx</code> 签下 <code>hanyu.zj17z.cn</code>，PM2 以 <code>hanyu-dazi</code> 起 <code>8091</code></li>
           <li>之后 Day 2–4 全在本地开发，服务器一次都不碰</li>
         </ul>
         <p class="milestone"><b>里程碑 M1：</b>两个地址都是通的——本地 <code>http://localhost:5173</code> 能热更新，手机上打开 <code>https://hanyu.zj17z.cn/</code> 看到同一个壳子（地址栏有小锁）；同时 <code>https://zj17z.cn/</code> 上的现有平台照常打开。</p>
@@ -842,10 +842,10 @@ CREATE INDEX idx_recordings_user ON recordings(user_id, item_id);
     <li><strong>想用手机看效果</strong>：Vite 加 <code>--host</code>，手机访问 <code>http://192.168.x.x:5173</code>。注意这是局域网 IP，<em>不是</em>安全上下文——麦克风与 PWA 在手机上要等 Day 1 上线之后才能测，本地只能在电脑浏览器里验。</li>
   </ul>
 
-  <p class="note">以下五节属于<strong>第二阶段</strong>，本地开发阶段不适用。内容都是在 <code>114.132.232.60</code> 上实测出来的，Day 1 晚上第一次上线时照此执行，不要临场发挥。</p>
+  <p class="note">以下五节属于<strong>第二阶段</strong>，本地开发阶段不适用。内容都是在 <code>[服务器IP]</code> 上实测出来的，Day 1 晚上第一次上线时照此执行，不要临场发挥。</p>
 
   <h3>二、上线 · 隔离：只做加法</h3>
-  <p><code>zj17z.cn</code>（114.132.232.60）上跑着 SmartCampus 的生产环境，学校在用。这台机器上任何一个粗暴动作，坏的都不只是它自己。以下每一条是硬约束，不是建议。</p>
+  <p><code>zj17z.cn</code>（[服务器IP]）上跑着 SmartCampus 的生产环境，学校在用。这台机器上任何一个粗暴动作，坏的都不只是它自己。以下每一条是硬约束，不是建议。</p>
   <ul>
     <li>独立目录 <code>/home/ubuntu/hanyu-dazi/</code>，不放进 <code>smartcampus/</code> 里面，也不共用它的 <code>server/data/</code></li>
     <li>独立 nginx vhost <code>/etc/nginx/sites-available/hanyu-dazi</code>，<code>server_name hanyu.zj17z.cn</code>，<strong>不加 <code>default_server</code></strong></li>
@@ -866,7 +866,7 @@ CREATE INDEX idx_recordings_user ON recordings(user_id, item_id);
     <div>
       <h3>Day 1 晚上要做的（一遍做完）</h3>
       <ul>
-        <li>DNSPod 加一条 A 记录：<code>hanyu</code> → <code>114.132.232.60</code>（<em>这一步是你来做</em>）</li>
+        <li>DNSPod 加一条 A 记录：<code>hanyu</code> → <code>[服务器IP]</code>（<em>这一步是你来做</em>）</li>
         <li>复制 <code>sites-available/smartcampus-demo</code> 成 <code>sites-available/hanyu-dazi</code>，改 <code>server_name</code> 与 <code>root</code></li>
         <li>软链进 <code>sites-enabled/</code>，<strong>文件名排在 <code>smartcampus-demo</code> 之后</strong>（见下方注意事项）</li>
         <li><code>sudo nginx -t && sudo systemctl reload nginx</code>（<code>reload</code> 不断开现有连接）</li>
@@ -942,7 +942,7 @@ CREATE INDEX idx_recordings_user ON recordings(user_id, item_id);
         <tr><td>本地能跑、传上去跑不起来</td><td>本地后端端口（<code>8091</code>）、目录结构、环境变量名与线上保持一致，上线只换地址，不改代码</td></tr>
         <tr><td>服务器是生产系统，动错就出事故</td><td>第十二节的隔离清单；Day 1 晚上第一次上线就以「只加不改」的方式落地，绝不碰现有 vhost 与 PM2 里的 <code>smartcampus</code> / <code>smartcampus-demo</code></td></tr>
         <tr><td>新 vhost 抢走 nginx 的兜底块，裸 IP 访问行为变了</td><td>启用时用一个字母序排在 <code>smartcampus-demo</code> 之后的软链名（如 <code>zz-hanyu-dazi</code>），<code>sites-available</code> 里的文件名不变</td></tr>
-        <tr><td>子域名解析没生效，certbot 签不下证书</td><td>Day 1 晚上的第一个动作：先在 DNSPod 加 A 记录 <code>hanyu</code> → <code>114.132.232.60</code>，用 <code>nslookup</code> 确认解析生效后再签。签证书前可以先用 <code>curl -H "Host: hanyu.zj17z.cn" http://127.0.0.1/</code> 验证 vhost 本身是通的。这一步没成也不影响 Day 2–4 的本地开发</td></tr>
+        <tr><td>子域名解析没生效，certbot 签不下证书</td><td>Day 1 晚上的第一个动作：先在 DNSPod 加 A 记录 <code>hanyu</code> → <code>[服务器IP]</code>，用 <code>nslookup</code> 确认解析生效后再签。签证书前可以先用 <code>curl -H "Host: hanyu.zj17z.cn" http://127.0.0.1/</code> 验证 vhost 本身是通的。这一步没成也不影响 Day 2–4 的本地开发</td></tr>
         <tr><td>改 nginx 影响现有站点</td><td>我们只新增文件、只改自己的 <code>server_name</code>，<code>sites-enabled/smartcampus</code> 一个字都不动；每次改完先 <code>nginx -t</code>，通过才 <code>reload</code></td></tr>
         <tr><td>五天做不完</td><td>每天一个可演示里程碑；最后一天只打磨不开发新功能；宁可少一个功能，不砍闭环</td></tr>
         <tr><td>内容量看起来太少</td><td>第八节的答辩口径，提前把 HSK 3.0 的数字记住</td></tr>

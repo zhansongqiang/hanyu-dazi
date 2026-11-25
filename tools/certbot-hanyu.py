@@ -27,17 +27,40 @@ import paramiko
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
-HOST, USER = "114.132.232.60", "ubuntu"
+# 主机名不写死服务器裸 IP：仓库是公开的，没必要在里面留一份服务器地址清单。
+# 默认走域名（ssh 自己解析），要连别的机器用 HANYU_HOST 覆盖。
+HOST, USER = os.environ.get("HANYU_HOST", "hanyu.zj17z.cn"), "ubuntu"
 KEY = r"C:\Users\Admin\.ssh\id_ed25519"
 DOMAIN = "hanyu.zj17z.cn"
-EXPECTED_IP = "114.132.232.60"
+# 「解析对不对」不跟一个写死的数比，而是跟**同机的主域**比：hanyu 必须和已经在用的
+# zj17z.cn 落在同一台机器上。这样既不用在仓库里写 IP，判据反而更严（换机器也不会假过）。
 ROOT = r"D:\coding\hanyu-dazi"
 
 
+def apex_ip() -> str:
+    """主域 zj17z.cn 现在解析到哪 —— 本脚本的判据基准。
+
+    故意不在 import 期求值：那样子一断网，脚本会在打印任何东西之前丢一个
+    socket.gaierror 回溯。而这个脚本存在的全部理由就是「别让解析问题看起来像
+    nginx 配错了」—— 它自己更不能变成那样。
+    """
+    try:
+        return socket.gethostbyname("zj17z.cn")
+    except OSError as e:
+        print(f"查不到主域 zj17z.cn 的解析（{type(e).__name__}: {e}）。\n"
+              f"这多半是本机网络/DNS 不通，跟证书无关 —— 先把网通了再跑这个脚本。")
+        sys.exit(1)
+
+
+EXPECTED_IP = None  # 由 main() 开头用 apex_ip() 填上
+
+
 def main():
+    global EXPECTED_IP
     ap = argparse.ArgumentParser()
     ap.add_argument("--email", default="")
     args = ap.parse_args()
+    EXPECTED_IP = apex_ip()
 
     # ── 1. 本地先解析一次 ─────────────────────────────────────────
     # 系统解析器 + 8.8.8.8 各查一次。本地递归解析器有缓存，可能比权威还快或还慢，
@@ -123,7 +146,7 @@ def main():
     run("curl -s -o /dev/null -w '主站 https          %{http_code}\\n' https://zj17z.cn/")
     run("curl -s -o /dev/null -w '演示站 https        %{http_code}\\n' https://demo.zj17z.cn/")
     run("curl -s -o /dev/null -w '裸IP 仍归主站       %{http_code}\\n' "
-        "-H 'Host: 114.132.232.60' https://127.0.0.1/ -k")
+        f"-H 'Host: {EXPECTED_IP}' https://127.0.0.1/ -k")
     run("systemctl list-timers --all 2>/dev/null | grep -i certbot "
         "|| echo '!! certbot 续期定时器不见了'")
 

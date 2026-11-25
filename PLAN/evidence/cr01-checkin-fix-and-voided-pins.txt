@@ -8,6 +8,11 @@ CR-01 打卡补结算 —— 改动本体 / 作废读数 / 部署对象 vs 验�
       （本会话仅有的两条用户消息之第二条；第一条是「请检查这个项目的开发进度，下一步要做什么？」）
 本件性质：**编排者自证**，不是验收结论。非作者签字的现状见 §五 —— 本波**空缺**。
 
+⚠️ **2026-11-25 脱敏改写**：本件里服务器裸 IP 已统一替换为 `[服务器IP]`（共 3 处）。
+被换掉的只是「主机是谁」这一串数字，**读数本身一字未改**（`nslookup` 的结论仍是「解析成功」）。
+之所以改写而不是保留原样：本件所在的仓库是公开的，而 IP 与「这台机器同时在跑学校生产系统」
+写在一起，等于递出一张指路牌。改写的范围、位置与读数不变性见 `PLAN/progress.html` 同日条目。
+
 本件要回答四个问题：
 
   ① 改的是哪个文件、改成什么、新值是多少
@@ -208,7 +213,7 @@ CR-01 打卡补结算 —— 改动本体 / 作废读数 / 部署对象 vs 验�
   (5) 后端全量回归：全新隔离库 + 夹具后端（8123），`node be.cjs`
       → **PASS=319 FAIL=0 SKIP=0，EXIT=0**。
 
-  (6) **生产环境实测**（114.132.232.60，只动 hanyu-dazi 自己的库）：
+  (6) **生产环境实测**（[服务器IP]，只动 hanyu-dazi 自己的库）：
       探针用户 id=1；
       打卡前 `streak-3.earned = false`；
       `POST /checkin` → `{"created":true,"checkDate":"2026-11-24",
@@ -302,7 +307,7 @@ PM2 `online`、`restarts` 不再增长、error.log 空；
 
     域名 `hanyu.zj17z.cn` 解析状态 = **NXDOMAIN**（不存在）
         nslookup hanyu.zj17z.cn 1.1.1.1  → Non-existent domain
-        nslookup zj17z.cn             → 114.132.232.60（父域正常）
+        nslookup zj17z.cn             → [服务器IP]（父域正常）
 
 ⇒ 本波 nginx 只上了 **HTTP**（未加 `--certbot`），
   `https://hanyu.zj17z.cn/` 返回 **000**。
@@ -313,7 +318,7 @@ PM2 `online`、`restarts` 不再增长、error.log 空；
 ⇒ `plan.html` §十二·六 的上线验收项「`https://hanyu.zj17z.cn/` 必须 200」
   **本波不可达** —— 原因不在部署，在 **DNS**。
 
-⇒ 需要人做的一件事：**加一条 A 记录 `hanyu.zj17z.cn → 114.132.232.60`**；
+⇒ 需要人做的一件事：**加一条 A 记录 `hanyu.zj17z.cn → [服务器IP]`**；
   生效后跑 `python -I tools/deploy-hanyu.py --certbot` 补完 vhost 的 HTTPS。
 
 

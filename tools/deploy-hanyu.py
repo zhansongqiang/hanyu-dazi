@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Deploy hanyu-dazi to 114.132.232.60 -- the host that runs the school's
+"""Deploy hanyu-dazi to the zj17z.cn host -- the host that runs the school's
 SmartCampus production system.
 
 Read this before changing anything here.
@@ -51,7 +51,9 @@ if hasattr(sys.stdout, "reconfigure"):
 if hasattr(sys.stderr, "reconfigure"):
     sys.stderr.reconfigure(encoding="utf-8", errors="replace")
 
-HOST, USER = "114.132.232.60", "ubuntu"
+# 主机名不写死服务器裸 IP：仓库公开，不留服务器地址清单。默认走域名解析，
+# 需要连别的机器时用 HANYU_HOST 覆盖。
+HOST, USER = os.environ.get("HANYU_HOST", "hanyu.zj17z.cn"), "ubuntu"
 KEY = r"C:\Users\Admin\.ssh\id_ed25519"
 ROOT = r"D:\coding\hanyu-dazi"
 REMOTE = "/home/ubuntu/hanyu-dazi"

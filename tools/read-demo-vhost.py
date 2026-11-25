@@ -12,7 +12,8 @@ import sys
 
 import paramiko
 
-HOST, USER = "114.132.232.60", "ubuntu"
+# 不写死裸 IP：走域名解析（仓库公开，不留服务器地址清单）
+HOST, USER = "hanyu.zj17z.cn", "ubuntu"
 KEY = r"C:\Users\Admin\.ssh\id_ed25519"
 OUT = r"D:\coding\hanyu-dazi\shots\demo-vhost.txt"
 

@@ -22,8 +22,20 @@ PLAN = Path(__file__).resolve().parent.parent / "plan.html"
 NESTING = ["section", "div", "ul", "ol", "li", "p", "table", "tr",
            "details", "main", "span", "h2", "h3", "em", "code", "strong"]
 
+# 服务器裸 IP 也不该出现在这份文档里。守卫要查它，但**不能把 IP 原样写在守卫里** ——
+# 否则守卫自己就成了仓库里唯一那份 IP 副本，而且它的 stdout 会被粘进取证文件，
+# 等于换个地方又漏一次（仓库历史上的 IP 正是这么进去的）。所以：串用八位组拼出来，
+# 打印时也换成标签，读数里不带 IP。
+BARE_IP = ".".join(("114", "132", "232", "60"))
+
 STALE = ["175.178", "visible-learning", "8090", "CETHelper",
-         "http://114.132.232.60", "npm run deploy"]
+         BARE_IP, "npm run deploy"]
+
+
+def label(tok: str) -> str:
+    # 英文标签，不是偷懒：本脚本其余输出全是 ASCII，控制台编码（GBK/UTF-8）
+    # 一换中文就可能打出乱码 —— 而这份读数是要被粘进取证文件的，乱码等于没读到。
+    return "server bare IP" if tok == BARE_IP else tok
 
 
 def count_tags(html: str, tag: str) -> tuple[int, int]:
@@ -54,7 +66,7 @@ def main() -> int:
         mark = "ok " if n == 0 else "BAD"
         if n:
             bad += 1
-        print(f"  {mark} {tok:<24} {n}")
+        print(f"  {mark} {label(tok):<24} {n}")
 
     print()
     if bad:

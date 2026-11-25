@@ -6,7 +6,8 @@ the same box, certbot-managed, and it does not disturb the main site.
 """
 import paramiko
 
-HOST = "114.132.232.60"
+# 不写死裸 IP：走域名解析（仓库公开，不留服务器地址清单）
+HOST = "hanyu.zj17z.cn"
 USER = "ubuntu"
 KEY = r"C:\Users\Admin\.ssh\id_ed25519"
 

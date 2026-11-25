@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Read-only inventory of 114.132.232.60 (zj17z.cn) for planning purposes.
+"""Read-only inventory of the zj17z.cn host for planning purposes.
 
 This is the SmartCampus production host: a live system a school depends on.
 Every command here is READ-ONLY. No writes, no pm2 mutations, no reloads.
@@ -12,7 +12,8 @@ import sys
 
 import paramiko
 
-HOST = "114.132.232.60"
+# 不写死裸 IP：走域名解析（仓库公开，不留服务器地址清单）
+HOST = "hanyu.zj17z.cn"
 USER = "ubuntu"
 KEY = r"C:\Users\Admin\.ssh\id_ed25519"
 
