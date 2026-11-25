@@ -217,6 +217,9 @@ import type { AttemptResult, AttemptBadge, FinishResult } from '../../api/attemp
 import { wrongApi } from '../../api/wrong'
 import type { WrongPracticePayload } from '../../api/wrong'
 import { isLoggedIn } from '../../utils/auth'
+// 听音题的 audioUrl 是**根相对**路径（`/audio/<key>.mp3`），打包成 APP 后
+// `https://localhost/audio/...` 会 404 —— 必须过 absUrl 补绝对源，见 utils/app-base.ts
+import { absUrl } from '../../utils/app-base'
 import { createTrace } from '../stroke/hanzi'
 import type { TraceHandle } from '../stroke/hanzi'
 
@@ -685,7 +688,7 @@ function playAudio() {
   } catch {
     /* 还没开始播，stop 会抛，忽略 */
   }
-  audio.src = url
+  audio.src = absUrl(url) ?? url
   playing.value = true
   audio.play()
 }

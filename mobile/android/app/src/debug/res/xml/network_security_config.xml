@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  **仅 debug 构建**的网络安全策略（buildType 源集覆盖 main，release 包看不到这个文件）。
+
+  目的：让 `Pixel_7` 模拟器里的壳能连**本机**跑的后端做端到端验证。
+  `10.0.2.2` 是 Android 模拟器里指向"宿主机回环"的固定别名，真机上不是一个可用的地址。
+  除此之外仍旧一律禁止明文 —— 例外范围只有这一个域，且不带子域。
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false" />
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="false">10.0.2.2</domain>
+    </domain-config>
+</network-security-config>

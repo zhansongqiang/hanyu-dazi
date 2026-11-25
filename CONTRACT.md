@@ -272,10 +272,21 @@ HAVING SUM(is_correct = 0) > 0
   "challengerName":"小明", "challengerScore":null, "challengerMs":null,
   "challengerId": 1,          // ← 前端据此判断「我就是发起人，不要让我再答一遍」
   "expiresAt":"2026-11-30 23:59:59",
+  "total": 12,                // ← 这一课一共几道题（题量，与 items 是否下发无关）
   "items": [ /* 同 §4.1 的 item 对象 */ ] }
 ```
 
 `status != 'open'`（已 done / 已 expired）时**仍返回**，但 `items` 为 `null`，前端展示对比页或「已结束」。
+
+**`total`（题量）与 `items`（题目内容）是两件事，必须分开给**：`items` 只在 `open` 时下发，
+`total` **任何 status 都要给**。`status === 'open'` 时 `total` 必须等于 `items.length`，
+后端以 `items.length` 为准（不要再单独 count 一次，两条查询会漂）。`done` / `expired` 时
+`total` = 该课的题数。
+
+> **变更记录（2026-11-24，用户批准）**：本字段是后加的。加之前前端在已结束的对战页
+> 只能打印 `items.length`，渲染出「出的题，一共 **0** 道」的错文案 ——
+> 实测：已结束的对战显示 0 道，进行中的同一课显示 12 道。前端要的是**题量**，
+> 不该依赖**题目内容**是否下发。
 
 **`POST /duels/:code/submit`** 请求：
 

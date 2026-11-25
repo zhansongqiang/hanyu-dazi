@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ⚠️ 自适应图标（`mipmap-anydpi-v26/ic_launcher.xml`）的**底色层**。
+     `<background android:drawable="@color/ic_launcher_background"/>` 引用的就是这一行。
+
+  模板默认是 #FFFFFF（纯白）。前台的 `ic_launcher_foreground.png` 只画了白色圆环和
+  「搭」，底色层是白的 → 白环落在白底上等于隐形，启动器里只剩一个红字漂在白色方块上。
+  取 Web 端设计令牌的**朱砂** #AE332E，与 `values/colors.xml` 的 colorPrimary 同源：
+  朱砂是印章的底色，白环与「搭」是被"刻"出来的 —— 白文印的构成。
+-->
+<resources>
+    <color name="ic_launcher_background">#AE332E</color>
+</resources>

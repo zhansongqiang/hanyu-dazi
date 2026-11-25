@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  正式包的网络安全策略：**只走 HTTPS，不开明文**（targetSdk 36 的默认值，这里显式写出来）。
+
+  ⚠️ 不要为了"能在模拟器里连本机后端"而在这个文件里加明文例外 ——
+     例外只写在 `app/src/debug/res/xml/network_security_config.xml`，那份按构建类型
+     只覆盖 debug 包，release 包拿不到它。加在这里等于把例外发给了所有学生。
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false" />
+</network-security-config>

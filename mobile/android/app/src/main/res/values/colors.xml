@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ⚠️ 这三个颜色是 `values/styles.xml` 的 AppTheme 引用的（`@color/colorPrimary` 等）。
+     Capacitor 8 的模板引用它们却没有自带定义，缺了会在 AAPT2 链接期直接报
+     `resource color/colorPrimary not found` —— 不是可选项，删不得。
+
+  取值直接沿用 Web 端的**设计令牌**（`mobile/src/App.vue` 的 `:root`）：
+  朱砂 #ae332e / 泥金 #8a6614 / 宣纸 #f6f2ea。改这里等于改整个 App 的原生配色，
+  改之前先跟 Web 端对齐，不要两套色。
+-->
+<resources>
+    <color name="colorPrimary">#AE332E</color>     <!-- 朱砂 -->
+    <color name="colorPrimaryDark">#7E241F</color> <!-- 朱砂压暗一档（状态栏） -->
+    <color name="colorAccent">#8A6614</color>      <!-- 泥金 -->
+    <color name="paper">#F6F2EA</color>            <!-- 宣纸（启动图底色） -->
+</resources>

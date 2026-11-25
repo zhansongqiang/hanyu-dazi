@@ -87,6 +87,22 @@ async function loadItems(lessonId: number) {
   return rows.map(toItemDto);
 }
 
+/**
+ * 这一课一共几道题。
+ *
+ * 为什么需要它（CHANGE-REQUEST，2026-11-24 用户批准）：契约 §4.4 原本只给 `items`，
+ * 而 `status != 'open'` 时 `items` 是 `null` —— 于是前端拿不到"一共几道"这个数，
+ * 已结束的对战页只能打印 `items.length`，渲染出「出的题，一共 0 道」这种错文案
+ * （本地 8091 实测：已结束的 ESPAUM 显示 0 道，进行中的 8Z23N4 显示 12 道）。
+ * 前端要的是**题量**，不该依赖**题目内容**是否下发。
+ */
+async function countItems(lessonId: number): Promise<number> {
+  const row = (await db('items').where({ lesson_id: lessonId }).count({ c: '*' }).first()) as
+    | { c?: number | string }
+    | undefined;
+  return Number(row?.c ?? 0);
+}
+
 // ⚠️ recent 必须在 :code 之前
 router.get(
   '/duels/recent',
@@ -172,6 +188,11 @@ router.get(
       | { nickname?: string | null; username?: string | null }
       | undefined;
 
+    // 只有还能答的时候才给题目；已结束/已过期一律 null（契约 §4.4）
+    // ⚠️ `total` 必须在 open 时取自 `items.length` 本身，不能另跑一次 count ——
+    //    两道查询分开算，将来任何一个过滤条件改动都会让「一共 N 道」和实际题数对不上。
+    const items = status === 'open' ? await loadItems(d.lesson_id) : null;
+
     return success(res, {
       code: d.code,
       status,
@@ -182,8 +203,9 @@ router.get(
       challengerMs: d.challenger_ms,
       challengerId: d.challenger_id,
       expiresAt: d.expires_at,
-      // 只有还能答的时候才给题目；已结束/已过期一律 null（契约 §4.4）
-      items: status === 'open' ? await loadItems(d.lesson_id) : null,
+      // 题量：open 时 = 下发的题数，done/expired 时 = 这一课的题数（items 为 null 也要能显示）
+      total: items ? items.length : await countItems(d.lesson_id),
+      items,
     });
   })
 );

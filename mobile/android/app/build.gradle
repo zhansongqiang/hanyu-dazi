@@ -1,0 +1,80 @@
+apply plugin: 'com.android.application'
+
+// ── release 签名 ────────────────────────────────────────────────────────
+// 密钥与口令**只存在于仓库外**（`~/.android-keystores/keystore.properties`）——
+// 仓库里没有、也永远不会有任何凭据；`.gitignore` 另外挡掉了 *.jks / *.keystore 兜底。
+// 找不到该文件时 release 分支保持**未签名**（`assembleRelease` 照样能跑，产物叫
+// `app-release-unsigned.apk`，装不上但能验证编译），这样别人 clone 后不需要密钥即可构建。
+def keystorePropsFile = new File(System.getProperty('user.home'), '.android-keystores/keystore.properties')
+def hasReleaseKey = keystorePropsFile.exists()
+def keystoreProps = new Properties()
+if (hasReleaseKey) {
+    keystorePropsFile.withInputStream { keystoreProps.load(it) }
+}
+
+android {
+    namespace = "cn.zj17z.hanyudazi"
+    compileSdk = rootProject.ext.compileSdkVersion
+    defaultConfig {
+        applicationId "cn.zj17z.hanyudazi"
+        minSdkVersion rootProject.ext.minSdkVersion
+        targetSdkVersion rootProject.ext.targetSdkVersion
+        versionCode 1
+        // 与 src/manifest.json 的 versionName 对齐 —— 两处各写各的必然会漂移，
+        // 以后升版本必须同时改（APK 上学生看到的版本号以这里为准）
+        versionName "0.1"
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        aaptOptions {
+             // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
+             // Default: https://android.googlesource.com/platform/frameworks/base/+/282e181b58cf72b6ca770dc7ca5f91f135444502/tools/aapt/AaptAssets.cpp#61
+            ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
+        }
+    }
+    signingConfigs {
+        if (hasReleaseKey) {
+            release {
+                storeFile file(keystoreProps['storeFile'])
+                storePassword keystoreProps['storePassword']
+                keyAlias keystoreProps['keyAlias']
+                keyPassword keystoreProps['keyPassword']
+            }
+        }
+    }
+    buildTypes {
+        release {
+            minifyEnabled false
+            // 有密钥才签名；没有就出 unsigned，绝不为了「能签上」而把凭据写进仓库
+            if (hasReleaseKey) { signingConfig signingConfigs.release }
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+    }
+}
+
+repositories {
+    flatDir{
+        dirs '../capacitor-cordova-android-plugins/src/main/libs', 'libs'
+    }
+}
+
+dependencies {
+    implementation fileTree(include: ['*.jar'], dir: 'libs')
+    implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"
+    implementation "androidx.coordinatorlayout:coordinatorlayout:$androidxCoordinatorLayoutVersion"
+    implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
+    implementation project(':capacitor-android')
+    testImplementation "junit:junit:$junitVersion"
+    androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
+    androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
+    implementation project(':capacitor-cordova-android-plugins')
+}
+
+apply from: 'capacitor.build.gradle'
+
+try {
+    def servicesJSON = file('google-services.json')
+    if (servicesJSON.text) {
+        apply plugin: 'com.google.gms.google-services'
+    }
+} catch(Exception e) {
+    logger.info("google-services.json not found, google-services plugin not applied. Push Notifications won't work")
+}

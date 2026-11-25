@@ -38,6 +38,14 @@ export interface DuelDetail {
   /** 前端据此判断「我就是发起人」—— 用于「你已答过，再看一遍结果」的分支 */
   challengerId: number
   expiresAt: string | null
+  /**
+   * 这一课一共几道题 —— **任何 status 都有值**，与 `items` 是否下发无关。
+   *
+   * ⚠️ 别再用 `items.length` 当题量：`status !== 'open'` 时 `items` 是 `null`，
+   *    已结束的对战页会打印出「一共 0 道」（2026-11-24 实测踩过）。
+   *    `items` 是**题目内容**，`total` 才是**题量**。
+   */
+  total: number
   /** 只有 status === 'open' 时才有题目；已结束/已过期一律 null */
   items: CourseItem[] | null
 }

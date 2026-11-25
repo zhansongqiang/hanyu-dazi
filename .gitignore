@@ -27,9 +27,40 @@ mobile/dist/
 server/dist/
 node_modules/
 
+# ── 手机 APP 打包 ──────────────────────────────────────────────
+# dist-capp 是发货态的 Capacitor webDir（见 mobile/capacitor.config.ts）：API 源烤成
+# https://hanyu.zj17z.cn。dist-capp-local 是**验证态**：API 源烤成 http://10.0.2.2:8091
+# （模拟器回指宿主机），只为录屏取证存在。两者都是构建产物，都不进版本库 ——
+# 尤其 dist-capp-local，它只是「指向某台开发机回环地址」的一份快照，对任何别人都没用。
+mobile/dist-capp/
+mobile/dist-capp-local/
+# _scratch 是取证用的临时场：CDP 探针脚本 + 截图 + 从模拟器拉回来的 base.apk 副本
+# （单份 4.5 MB，且是别人产物的二进制拷贝），不该进库。
+mobile/android/_scratch/
+# 签名密钥绝不进库（APK 用）；约定放在仓库外的 ~/.android-keystores/
+*.keystore
+*.jks
+
 # ── 打包中间物与截图 ───────────────────────────────────────────
 # 每次部署都会重写的 tar 包；shots 里的 png/txt 是取证记录，保留。
 shots/_*.tar.gz
+
+# ── 参赛交付物 ─────────────────────────────────────────────────
+# 演示录屏是 6 MB 二进制，交付方式是在活动页上传，不靠仓库分发；仓库是公开的，
+# 塞进去只会把历史撑大且删不干净。要分享就用 Release 附件。
+PLAN/submission/*.mp4
+
+# ── 一次性取证的中间物 ─────────────────────────────────────────
+# 这些是「量一次就丢」的读数，不是成果：_copy-*.png 是拍封面时的试拍帧，
+# _copy-*.txt 是那次拍摄的探针 stdout，server/_summary.json 是灌数据前从
+# /me/summary 抓的一份响应快照（用来和灌完之后的数字对账）。
+# 成果是 PLAN/xiaohongshu-launch.md 和 PLAN/covers/，那两个要进库。
+PLAN/_copy-*.png
+PLAN/_copy-*.txt
+server/_summary.json
+# seed-demo 的回滚台账：记的是「某个时间点某个库里各表的最大 id」，是**状态**不是源码，
+# 换台机、换份库就失效。灌数据时由脚本写出，回滚完之后删掉。
+server/scripts/.seed-demo-marks.json
 
 # ── Python / 编辑器 ────────────────────────────────────────────
 __pycache__/

@@ -6,6 +6,7 @@ import type { DuelDetail, DuelSubmitResult } from '../../api/duel'
 import { courseApi } from '../../api/course'
 import type { CourseItem, CourseUnit, LessonBrief } from '../../api/course'
 import { isLoggedIn, getUserInfo } from '../../utils/auth'
+import { shareUrl } from '../../utils/app-base'
 
 /**
  * PK 对战 —— 契约 §4.4
@@ -273,16 +274,14 @@ async function createDuel(lesson: LessonBrief) {
 
 /**
  * 分享链接要是**能直接点开**的绝对地址，相对路径发给同学等于发了个死链。
- * ⚠️ 必须是「函数 + 两个 return」：条件编译注释是**构建时**才剥的，
- *    若要写成两处 `const full = …` 就是源码层面的重名声明，`npx tsc` 直接报错。
+ *
+ * ⚠️ 这里原本写的是 `${window.location.origin}${window.location.pathname}#${rel}`。
+ *    在浏览器里它是对的；但打包成 APP（Capacitor 壳）之后 WebView 的源是
+ *    `https://localhost`，于是复制出去的链接变成 `https://localhost/index.html#/…`
+ *    —— 同学点开必然是死链。站点源统一由 `utils/app-base.ts` 按运行形态给。
  */
 function shareUrlOf(rel: string) {
-  // #ifdef H5
-  return `${window.location.origin}${window.location.pathname}#${rel}`
-  // #endif
-  // #ifndef H5
-  return rel
-  // #endif
+  return shareUrl(rel)
 }
 
 function copyShare() {
@@ -403,7 +402,9 @@ function restart() {
         <view v-if="phase === 'pick'" class="hd-card intro">
           <text class="intro-lb hd-note">挑战 · 口令 {{ detail.code }}</text>
           <text class="intro-title hd-title">《{{ detail.lessonTitle }}》</text>
-          <text class="intro-by hd-note">{{ detail.challengerName }} 出的题，一共 {{ items.length }} 道</text>
+          <!-- ⚠️ 题量一律用 detail.total，不要用 items.length：
+               status !== 'open' 时后端按契约不给 items（null），已结束的对战会渲染成「一共 0 道」 -->
+          <text class="intro-by hd-note">{{ detail.challengerName }} 出的题，一共 {{ detail.total }} 道</text>
 
           <template v-if="canAnswer">
             <view v-if="!logged" class="name-row">

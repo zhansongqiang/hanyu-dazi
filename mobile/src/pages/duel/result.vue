@@ -4,6 +4,7 @@ import { onLoad } from '@dcloudio/uni-app'
 import { duelApi } from '../../api/duel'
 import type { DuelDetail, DuelRecentItem, DuelSubmitResult } from '../../api/duel'
 import { isLoggedIn } from '../../utils/auth'
+import { shareUrl } from '../../utils/app-base'
 
 /**
  * 对战结果 —— 契约 §4.4
@@ -198,18 +199,13 @@ function goAnswer() {
 
 /**
  * 分享链接要是**能直接点开**的绝对地址，相对路径发给同学等于发了个死链。
- * ⚠️ 这里必须是「函数 + 两个 return」，不能写成 `ifdef` 里各 `const full` 一遍 ——
- *    条件编译注释是**构建时**才剥的，写两个同名 const 在源码层面就是重名声明，
- *    `npx tsc` 会直接报错。
+ *
+ * ⚠️ 与 `duel.vue` 同一个坑：原来用 `window.location.origin` 拼，
+ *    浏览器里对，打包成 APP 之后会变成 `https://localhost/#/…`（死链）。
+ *    站点源统一由 `utils/app-base.ts` 按运行形态给。
  */
 function shareUrlOf(c: string) {
-  const rel = `/pages/duel/duel?code=${c}`
-  // #ifdef H5
-  return `${window.location.origin}${window.location.pathname}#${rel}`
-  // #endif
-  // #ifndef H5
-  return rel
-  // #endif
+  return shareUrl(`/pages/duel/duel?code=${c}`)
 }
 
 function copyShare() {

@@ -161,6 +161,9 @@
 import { ref, computed, onUnmounted } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import { isLoggedIn } from '../../utils/auth'
+// 错题里的 audioUrl 同样是根相对路径 `/audio/<key>.mp3` —— 打包成 APP 后必须补绝对源，
+// 否则 `https://localhost/audio/...` 404，听音题一律放不出声。见 utils/app-base.ts
+import { absUrl } from '../../utils/app-base'
 import { wrongApi } from '../../api/wrong'
 import type { WrongByLesson, WrongItem } from '../../api/wrong'
 
@@ -317,12 +320,13 @@ let audio: any = null
 
 function play(url: string | null) {
   if (!url) return
+  const src = absUrl(url) ?? url
   try {
     if (!audio) audio = uni.createInnerAudioContext()
-    if (audio.src === url) {
+    if (audio.src === src) {
       audio.stop()
     }
-    audio.src = url
+    audio.src = src
     audio.play()
   } catch {
     uni.showToast({ title: '这台设备放不了音频', icon: 'none' })

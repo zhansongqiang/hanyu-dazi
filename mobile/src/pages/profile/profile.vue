@@ -300,13 +300,39 @@ function doLogout() {
 
     <view v-if="logged" class="danger" @tap="doLogout">退出登录</view>
 
-    <text class="foot hd-note">汉语搭子 v0.1.0</text>
+    <view class="foot-block">
+      <text class="foot hd-note">汉语搭子 v0.1</text>
+      <text class="foot hd-note">© zzy</text>
+      <!-- 作者联系邮箱。selectable 是为了让用户能长按选中复制 —— WebView 里
+           mailto: 要靠系统邮件客户端接管，模拟器/无邮件应用的机器上点了没反应，
+           所以这里不做成链接，只保证「能选中、能复制」。 -->
+      <text class="foot hd-note foot-contact" selectable>联系作者：3381960988@qq.com</text>
+    </view>
   </view>
 </template>
 
 <style>
 .profile {
   padding-top: 56rpx;
+}
+
+.foot-block {
+  display: flex;
+  flex-direction: column;
+  gap: 4rpx;
+  margin-top: 56rpx;
+  margin-bottom: 24rpx;
+}
+
+/* 版权三行贴在一起：行距由 .foot-block 的 gap 统一给，别再各带 56rpx 上边距 */
+.foot-block .foot {
+  margin-top: 0;
+}
+
+/* 联系邮箱要能被长按选中复制（uni 的 selectable 在 H5 端给的就是 user-select） */
+.foot-contact {
+  user-select: text;
+  -webkit-user-select: text;
 }
 
 .me {
