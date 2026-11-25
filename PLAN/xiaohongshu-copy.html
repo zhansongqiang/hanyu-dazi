@@ -1,0 +1,632 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>小红书文案</title>
+<style>
+  :root {
+    --paper:      #F6F2EA;
+    --paper-2:    #FCF9F4;
+    --card:       #FFFDF9;
+    --ink:        #2B2B2B;
+    --ink-soft:   #6B625A;
+    --cinnabar:   #AE332E;
+    --line:       rgba(43,43,43,.13);
+    --shadow:     0 2px 12px rgba(80,60,40,.07);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper:    #1B1917;
+      --paper-2:  #221F1B;
+      --card:     #232019;
+      --ink:      #EDE6D8;
+      --ink-soft: #A79C8D;
+      --cinnabar: #E07A6A;
+      --line:     rgba(237,230,216,.15);
+      --shadow:   none;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 0 16px 96px;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: "PingFang SC", "Microsoft YaHei", system-ui, -apple-system, sans-serif;
+    -webkit-text-size-adjust: 100%;
+  }
+  .wrap { max-width: 1180px; margin: 0 auto; }
+
+  /* ---------- 头部 ---------- */
+  .hero { padding: 52px 0 26px; }
+  .eyebrow {
+    font-size: 13px; letter-spacing: .42em; color: var(--cinnabar);
+    font-weight: 700; margin-bottom: 18px;
+  }
+  h1 { font-size: clamp(34px, 5vw, 52px); line-height: 1.18; font-weight: 800; margin: 0 0 18px; letter-spacing: .01em; }
+  .lede { font-size: 15px; line-height: 1.9; color: var(--ink-soft); margin: 0; max-width: 62ch; }
+  .lede b { color: var(--ink); font-weight: 700; }
+  .rule { width: 96px; height: 6px; background: var(--cinnabar); margin: 26px 0 0; }
+
+  /* ---------- 发布节奏 ---------- */
+  .schedule { margin: 34px 0 40px; }
+  .schedule h2 { font-size: 14px; letter-spacing: .3em; color: var(--ink-soft); font-weight: 700; margin: 0 0 16px; }
+  .slots { display: flex; flex-wrap: wrap; gap: 10px; }
+  .slot {
+    display: flex; align-items: baseline; gap: 9px;
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: 999px; padding: 9px 17px; font-size: 14px;
+  }
+  .slot .d { color: var(--cinnabar); font-weight: 800; font-variant-numeric: tabular-nums; }
+  .slot .w { color: var(--ink); font-weight: 600; }
+  .slot .why { color: var(--ink-soft); font-size: 13px; }
+  .slot.odd { background: transparent; border-style: dashed; }
+
+  /* ---------- 卡片 ---------- */
+  .card {
+    display: grid; grid-template-columns: 292px 1fr; gap: 30px;
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: 18px; padding: 26px; margin-bottom: 26px;
+    box-shadow: var(--shadow);
+  }
+  .cover a { display: block; }
+  .cover img {
+    width: 100%; height: auto; display: block;
+    border-radius: 10px; border: 1px solid var(--line);
+  }
+  .cover-note {
+    font-size: 12.5px; line-height: 1.75; color: var(--ink-soft);
+    margin-top: 12px; padding-top: 10px; border-top: 1px dashed var(--line);
+  }
+  .cover-note code {
+    font-family: ui-monospace, Consolas, monospace; font-size: 12px;
+    background: var(--paper-2); padding: 1px 5px; border-radius: 4px;
+  }
+
+  .card-head { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 20px; }
+  .num { font-size: 15px; font-weight: 800; letter-spacing: .06em; }
+  .chip {
+    font-size: 12.5px; padding: 4px 11px; border-radius: 999px;
+    background: var(--paper-2); border: 1px solid var(--line); color: var(--ink-soft);
+  }
+  .chip.go { color: var(--cinnabar); border-color: color-mix(in srgb, var(--cinnabar) 34%, transparent); font-weight: 700; }
+
+  .sec-label {
+    font-size: 12.5px; letter-spacing: .22em; color: var(--ink-soft);
+    font-weight: 700; margin: 0 0 12px;
+  }
+  .titles { list-style: none; margin: 0 0 22px; padding: 0; display: grid; gap: 9px; }
+  .titles li { display: grid; grid-template-columns: 62px 1fr; align-items: center; gap: 10px; }
+  .pick { font-size: 12px; color: var(--ink-soft); letter-spacing: .08em; }
+  .title-btn {
+    width: 100%; text-align: left; cursor: pointer;
+    font: inherit; font-size: 16.5px; font-weight: 600; line-height: 1.55;
+    color: var(--ink); background: transparent;
+    border: 1px dashed var(--line); border-radius: 10px; padding: 11px 15px;
+    transition: border-color .16s, color .16s, background .16s;
+  }
+  .title-btn:hover { border-color: var(--cinnabar); color: var(--cinnabar); border-style: solid; }
+  .title-btn:active { background: var(--paper-2); }
+
+  .acts { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 14px; }
+  .btn {
+    cursor: pointer; font: inherit; font-size: 14px; font-weight: 700;
+    padding: 9px 18px; border-radius: 9px;
+    border: 1px solid var(--line); background: transparent; color: var(--ink);
+    transition: background .16s, color .16s, border-color .16s;
+  }
+  .btn:hover { border-color: var(--cinnabar); color: var(--cinnabar); }
+  .btn.primary { background: var(--cinnabar); border-color: var(--cinnabar); color: #fff; }
+  .btn.primary:hover { background: color-mix(in srgb, var(--cinnabar) 84%, #000); color: #fff; }
+  .acts .hint { font-size: 12.5px; color: var(--ink-soft); }
+
+  .body {
+    white-space: pre-wrap; word-break: break-word;
+    font-size: 15.5px; line-height: 1.9;
+    background: var(--paper-2); border: 1px solid var(--line);
+    border-radius: 12px; padding: 20px 22px;
+  }
+  .body strong { font-weight: 800; }
+
+  /* ---------- 页脚提醒 ---------- */
+  .notes {
+    margin-top: 44px; padding: 26px 28px;
+    border: 1px solid var(--line); border-left: 5px solid var(--cinnabar);
+    border-radius: 14px; background: var(--card);
+  }
+  .notes h2 { font-size: 15px; letter-spacing: .16em; margin: 0 0 16px; }
+  .notes ul { margin: 0; padding-left: 1.15em; }
+  .notes li { font-size: 14.5px; line-height: 1.95; margin-bottom: 9px; color: var(--ink-soft); }
+  .notes li b { color: var(--ink); }
+  .notes li:last-child { margin-bottom: 0; }
+
+  /* ---------- 复制提示 ---------- */
+  #toast {
+    position: fixed; left: 50%; bottom: 30px;
+    transform: translateX(-50%) translateY(16px);
+    opacity: 0; pointer-events: none; transition: opacity .18s, transform .18s;
+    background: var(--ink); color: var(--paper);
+    font-size: 14px; font-weight: 600; letter-spacing: .04em;
+    padding: 11px 22px; border-radius: 999px; z-index: 99;
+  }
+  #toast.on { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  :focus-visible { outline: 2px solid var(--cinnabar); outline-offset: 2px; }
+
+  @media (max-width: 860px) {
+    .card { grid-template-columns: 1fr; gap: 22px; padding: 20px; }
+    .cover img { max-width: 300px; }
+    .titles li { grid-template-columns: 1fr; gap: 4px; }
+    .pick { padding-left: 2px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="hero">
+    <div class="eyebrow">汉语搭子 · 小红书</div>
+    <h1>六篇成品文案</h1>
+    <p class="lede">
+      每张卡片＝一篇笔记。<b>点标题直接复制该标题</b>；点「复制全文」拿到可直接粘贴进小红书的纯文本 ——
+      包含正文和话题标签，并且<b>已去掉 Markdown 的加粗星号</b>（页面上看到的粗体，粘贴后是普通文字，小红书正文本来也不支持加粗）。
+      文案的源头仍是 <code>PLAN/xiaohongshu-launch.md</code>，这里只是换个方便复制的样子。
+    </p>
+    <div class="rule"></div>
+  </header>
+
+  <section class="schedule">
+    <h2>发布节奏 · 前两周</h2>
+    <div class="slots">
+      <div class="slot"><span class="d">D1</span><span class="w">篇 4 · 声调干货</span><span class="why">纯干货起步，不带产品</span></div>
+      <div class="slot odd"><span class="d">D3</span><span class="w">篇 1 · 痛点洞察</span><span class="why">试探教育圈反应</span></div>
+      <div class="slot"><span class="d">D5</span><span class="w">篇 3 · 5 天故事</span><span class="why">冲爆款，涨泛粉</span></div>
+      <div class="slot odd"><span class="d">D7</span><span class="w">篇 6 · 不惩罚</span><span class="why">情绪共鸣</span></div>
+      <div class="slot"><span class="d">D9</span><span class="w">篇 2 · 错题本</span><span class="why">转功能种草</span></div>
+      <div class="slot odd"><span class="d">D11</span><span class="w">篇 5 · 写字</span><span class="why">打教育圈</span></div>
+      <div class="slot"><span class="d">D12+</span><span class="w">看数据定线</span><span class="why">迭代</span></div>
+    </div>
+  </section>
+
+  <!-- ============ 篇 1 ============ -->
+  <article class="card">
+    <div class="cover">
+      <a href="covers/cover-01.png" target="_blank" rel="noopener">
+        <img src="covers/cover-01.png" alt="篇 1 封面：课上一听就懂 / 课下一练就废">
+      </a>
+      <div class="cover-note">
+        <code>cover-01.png</code><br>
+        大字「课上一听就懂 / 课下一练就废」，下方产品答题页截图（03-question）。
+      </div>
+    </div>
+    <div class="copy-col">
+      <div class="card-head">
+        <span class="num">篇 1</span>
+        <span class="chip">痛点洞察</span>
+        <span class="chip">打教育圈</span>
+        <span class="chip go">D3 发</span>
+      </div>
+
+      <p class="sec-label">标题 · 三选一</p>
+      <ol class="titles">
+        <li><span class="pick">备选 1</span><button class="title-btn" data-copy="self">课上全懂，课下一练就废——留学生学中文卡在哪</button></li>
+        <li><span class="pick">备选 2</span><button class="title-btn" data-copy="self">学中文最没被解决的那一段：下课之后</button></li>
+        <li><span class="pick">备选 3</span><button class="title-btn" data-copy="self">教了三年对外汉语，我发现学生缺的从来不是课</button></li>
+      </ol>
+
+      <p class="sec-label">正文</p>
+      <div class="acts">
+        <button class="btn primary" data-copy="#body-1">复制全文</button>
+        <span class="hint">含话题标签，粘贴即用</span>
+      </div>
+      <div class="body" id="body-1">教过留学生的都懂这个场景 👇
+
+课上讲「日」，学生点头如捣蒜。
+下周再问，他愣住：老师，这个字念什么？
+
+不是他不认真，也不是课讲得不好。
+问题是——<strong>下课之后，没人管他练没练。</strong>
+
+网课把新知识讲给你，然后就没有然后了。
+学生手机里躺着好几个 App，可它们都在教新课，
+没人负责把他<strong>刚学过的那些</strong>练到手上。
+
+所以我自己做了个只干这一件事的小工具：汉语搭子。
+
+它不教新课，只做课后那一段：
+同一个「日」字，用五种问法轮着上——
+认字、拼音、词义、笔顺、听音。
+一天一刻钟，练完就走。
+
+一节课的知识点，换个问法也得认识，
+这才叫真的会了。
+
+想问做对外汉语的各位：
+你们的学生，课后会主动练吗？😮💨
+
+#对外汉语 #国际中文教育 #汉硕 #教外国人学中文 #中文教学
+#留学生 #汉语教学 #对外汉语教师 #中文学习</div>
+    </div>
+  </article>
+
+  <!-- ============ 篇 2 ============ -->
+  <article class="card">
+    <div class="cover">
+      <a href="covers/cover-02.png" target="_blank" rel="noopener">
+        <img src="covers/cover-02.png" alt="篇 2 封面：错题本＝诊断书">
+      </a>
+      <div class="cover-note">
+        <code>cover-02.png</code><br>
+        大字「错题本＝诊断书」，副标题「不只告诉你错了，还算总账、找规律、开处方」，下方错题本截图（05-wrongbook）。
+      </div>
+    </div>
+    <div class="copy-col">
+      <div class="card-head">
+        <span class="num">篇 2</span>
+        <span class="chip">产品展示</span>
+        <span class="chip">主打错题本</span>
+        <span class="chip go">D9 发</span>
+      </div>
+
+      <p class="sec-label">标题 · 三选一</p>
+      <ol class="titles">
+        <li><span class="pick">备选 1</span><button class="title-btn" data-copy="self">答错一道题，它告诉我为什么错、下一步练什么</button></li>
+        <li><span class="pick">备选 2</span><button class="title-btn" data-copy="self">我给自己做的练习App，把错题本当处方开</button></li>
+        <li><span class="pick">备选 3</span><button class="title-btn" data-copy="self">别的App告诉我错了，这个告诉我为什么</button></li>
+      </ol>
+
+      <p class="sec-label">正文</p>
+      <div class="acts">
+        <button class="btn primary" data-copy="#body-2">复制全文</button>
+        <span class="hint">含话题标签，粘贴即用</span>
+      </div>
+      <div class="body" id="body-2">大部分学习 App 的「错题本」，就是把错题堆在一个列表里。
+堆着，然后没人看。🙃
+
+我做的时候想改掉这一点：
+错题本不该是垃圾桶，该是<strong>诊断书</strong>。
+
+所以汉语搭子的错题本是这么工作的：
+
+📊 先算总账
+「共 23 道待复习，涉及 2 个课时」
+
+🔍 再找规律
+「错得最多的是认读（6 道），其次是拼音 5、描红 5」
+错在哪个题型，一目了然。
+
+💊 最后开处方
+「认读题错在字和意思没连上：
+先看提示那行，再把字连同释义一起读一遍。」
+
+✅ 而且每个知识点挂着「连对 ○○ 0/2」——
+<strong>连续答对 2 次才算真会了</strong>，
+否则它一直回来找你，不会假装你已经掌握。
+
+不是告诉你「错了」，是告诉你「错在哪、怎么改」。
+
+#学习方法 #错题本 #中文学习 #产品设计 #独立开发
+#对外汉语 #学习工具 #自我提升 #汉语搭子</div>
+    </div>
+  </article>
+
+  <!-- ============ 篇 3 ============ -->
+  <article class="card">
+    <div class="cover">
+      <a href="covers/cover-03.png" target="_blank" rel="noopener">
+        <img src="covers/cover-03.png" alt="篇 3 封面：5 天做出一个完整 App">
+      </a>
+      <div class="cover-note">
+        <code>cover-03.png</code><br>
+        超大「5 天 / 做出一个完整 App」＋真实数字（20 课时 / 308 题 / 80 知识点 / 28 描红字 / 5 种练法 / 15 枚印章），下方两张产品截图。
+      </div>
+    </div>
+    <div class="copy-col">
+      <div class="card-head">
+        <span class="num">篇 3</span>
+        <span class="chip">故事反差</span>
+        <span class="chip">冲爆款</span>
+        <span class="chip go">D5 发</span>
+      </div>
+
+      <p class="sec-label">标题 · 三选一</p>
+      <ol class="titles">
+        <li><span class="pick">备选 1</span><button class="title-btn" data-copy="self">5 天，我做出了一个完整的 App（含 308 道题）</button></li>
+        <li><span class="pick">备选 2</span><button class="title-btn" data-copy="self">一个人 5 天做完一个能用的产品，过程记录</button></li>
+        <li><span class="pick">备选 3</span><button class="title-btn" data-copy="self">从一份方案书到一个能点开就练的 App，我用了 5 天</button></li>
+      </ol>
+
+      <p class="sec-label">正文</p>
+      <div class="acts">
+        <button class="btn primary" data-copy="#body-3">复制全文</button>
+        <span class="hint">含话题标签，粘贴即用</span>
+      </div>
+      <div class="body" id="body-3">5 天前，我手上只有一份方案书。
+5 天后，它变成了一个能点开就练的完整产品。😳
+
+「汉语搭子」，一个给留学生做中文课后陪练的 App。
+
+做完的东西长这样：
+📚 20 个课时 · 308 道题 · 80 个知识点
+✍️ 28 个汉字带笔顺演示，米字格描红
+🔁 五种练法：认字 / 拼音 / 词义 / 笔顺 / 听音
+📈 错题本会自动归因 + 开处方
+🏮 还有科举段位、印章墙、8 人学习小组
+
+不是 demo，是真的能用。
+
+怎么做到 5 天的？
+靠的不是手速，是<strong>流程</strong>：
+
+① 并行功能波 → ② 冻结 → ③ 验收波 → ④ 部署波
+21 个单元分四条泳道并行推，
+每条只有<strong>非作者本人跑过断言</strong>才算通过。
+
+自己写的东西自己说「没问题」，不算数。
+
+这一条反直觉，但它是 5 天能收口的关键。
+
+#独立开发 #产品经理 #编程 #前端开发 #个人项目
+#做产品 #副业 #开发者 #技术宅 #毕业设计</div>
+    </div>
+  </article>
+
+  <!-- ============ 篇 4 ============ -->
+  <article class="card">
+    <div class="cover">
+      <a href="covers/cover-04.png" target="_blank" rel="noopener">
+        <img src="covers/cover-04.png" alt="篇 4 封面：mā 妈 / má 麻 / mǎ 马 / mà 骂">
+      </a>
+      <div class="cover-note">
+        <code>cover-04.png</code><br>
+        纯文字封面，无截图：四声对照表 mā 妈 / má 麻 / mǎ 马 / mà 骂，每格字色由浅到深暗示音高。
+      </div>
+    </div>
+    <div class="copy-col">
+      <div class="card-head">
+        <span class="num">篇 4</span>
+        <span class="chip">干货科普</span>
+        <span class="chip">泛流量</span>
+        <span class="chip go">D1 发 · 第一篇</span>
+      </div>
+
+      <p class="sec-label">标题 · 三选一</p>
+      <ol class="titles">
+        <li><span class="pick">备选 1</span><button class="title-btn" data-copy="self">同一个 ma，四个声调就是四个字（附记忆法）</button></li>
+        <li><span class="pick">备选 2</span><button class="title-btn" data-copy="self">外国人学中文最崩溃的一关：声调</button></li>
+        <li><span class="pick">备选 3</span><button class="title-btn" data-copy="self">mā má mǎ mà——为什么中文这么难？</button></li>
+      </ol>
+
+      <p class="sec-label">正文</p>
+      <div class="acts">
+        <button class="btn primary" data-copy="#body-4">复制全文</button>
+        <span class="hint">含话题标签，粘贴即用</span>
+      </div>
+      <div class="body" id="body-4">中文最让外国人崩溃的，不是汉字，是声调。😵
+
+同一个拼写 ma，四个声调就是四个完全不同的字：
+
+mā 妈 —— 妈妈
+má 麻 —— 麻烦
+mǎ 马 —— 马路
+mà 骂 —— 骂人
+
+念错一个调，意思就飞了。
+「我妈妈骑马」说成「我骂骂骂骂」不是段子，是日常。😂
+
+为什么这么难？
+因为大部分语言没有声调这个概念，
+母语里不存在的音，耳朵<strong>听不出来区别</strong>，
+不是不努力，是耳朵没训练过。
+
+所以练声调只有一条路：<strong>听，然后重复</strong>。
+不是背规则，是把耳朵练出条件反射。
+
+我把声调单独做成了一课放进产品里，
+就是想让这关有个地方能反复练。
+
+你学外语时最难的一关是什么？评论区聊聊 👇
+
+#中文学习 #声调 #对外汉语 #学中文 #外国人学中文
+#语言学 #汉语 #留学生 #语言学习 #拼音</div>
+    </div>
+  </article>
+
+  <!-- ============ 篇 5 ============ -->
+  <article class="card">
+    <div class="cover">
+      <a href="covers/cover-05.png" target="_blank" rel="noopener">
+        <img src="covers/cover-05.png" alt="篇 5 封面：会认 / 不会写">
+      </a>
+      <div class="cover-note">
+        <code>cover-05.png</code><br>
+        大字「会认 / 不会写」，下方米字格描红截图（04-stroke）。
+      </div>
+    </div>
+    <div class="copy-col">
+      <div class="card-head">
+        <span class="num">篇 5</span>
+        <span class="chip">产品展示</span>
+        <span class="chip">打「写字」这关</span>
+        <span class="chip go">D11 发</span>
+      </div>
+
+      <p class="sec-label">标题 · 三选一</p>
+      <ol class="titles">
+        <li><span class="pick">备选 1</span><button class="title-btn" data-copy="self">中文 App 大多跳过的一关：写字</button></li>
+        <li><span class="pick">备选 2</span><button class="title-btn" data-copy="self">会认不会写，是留学生最尴尬的事</button></li>
+        <li><span class="pick">备选 3</span><button class="title-btn" data-copy="self">我坚持给这个 App 加了「练字」功能，虽然很难做</button></li>
+      </ol>
+
+      <p class="sec-label">正文</p>
+      <div class="acts">
+        <button class="btn primary" data-copy="#body-5">复制全文</button>
+        <span class="hint">含话题标签，粘贴即用</span>
+      </div>
+      <div class="body" id="body-5">拼音、词义，选择题都能解决。
+<strong>但笔顺不行。</strong> ✍️
+
+一个留学生可能认识「河」，
+但你要他写出来，他就停住了。
+
+中文最特殊的一关就是字形和笔顺，
+而背单词式的 App <strong>根本不管这一关</strong>。
+
+所以我做了米字格描红：
+🖌️ 照着淡灰的笔画一笔一笔描，写错随时重来
+👀 卡住了可以点「看一遍笔顺」，先看再写
+🙋 「写不出来」也是一个选项——诚实地记错、进错题本，
+   下次再来。不假装你写对了。
+🚫 <strong>不做笔迹识别打分</strong>——
+   这一版不假装能判断你写得好不好，
+   只负责让你把这个字写一遍。
+
+覆盖 28 个字：
+从象形字（日 月 山 水 火 人 大 小）
+到偏旁字（河 海 洗 汉 树 林 桌 校 打 找 拉 拿）
+
+市面上的中文 App 大多直接跳过这关。
+可它恰恰是留学生写汉字最疼的地方。
+
+#中文学习 #汉字 #笔顺 #写字 #对外汉语
+#学中文 #书法 #留学生 #汉字之美</div>
+    </div>
+  </article>
+
+  <!-- ============ 篇 6 ============ -->
+  <article class="card">
+    <div class="cover">
+      <a href="covers/cover-06.png" target="_blank" rel="noopener">
+        <img src="covers/cover-06.png" alt="篇 6 封面：断签了？不清零。">
+      </a>
+      <div class="cover-note">
+        <code>cover-06.png</code><br>
+        大字「断签了？ / 不清零。」＋副标题「段位只升不降 · 答错也给经验」，右下角斜贴一张截图（06-summary）。
+      </div>
+    </div>
+    <div class="copy-col">
+      <div class="card-head">
+        <span class="num">篇 6</span>
+        <span class="chip">产品展示</span>
+        <span class="chip">反游戏化焦虑</span>
+        <span class="chip go">D7 发</span>
+      </div>
+
+      <p class="sec-label">标题 · 三选一</p>
+      <ol class="titles">
+        <li><span class="pick">备选 1</span><button class="title-btn" data-copy="self">我做的 App，断签不清零、段位不下降</button></li>
+        <li><span class="pick">备选 2</span><button class="title-btn" data-copy="self">为什么我的学习 App 故意不惩罚你</button></li>
+        <li><span class="pick">备选 3</span><button class="title-btn" data-copy="self">受够了断签清零，我自己做了个不惩罚的</button></li>
+      </ol>
+
+      <p class="sec-label">正文</p>
+      <div class="acts">
+        <button class="btn primary" data-copy="#body-6">复制全文</button>
+        <span class="hint">含话题标签，粘贴即用</span>
+      </div>
+      <div class="body" id="body-6">我受够了那些「断签就前功尽弃」的学习 App。😤
+
+练了三天，第四天忙忘了，
+连击清零、段位下降、解锁的内容收回。
+游戏化本来是动力，结果变成了压力源。
+
+所以我做汉语搭子的时候，定了一条死规矩：
+<strong>奖励，但不惩罚。</strong>
+
+具体是这么做的：
+
+✅ 答对 +10 经验，<strong>答错也给 +2</strong>
+✅ 完成一个课时 +20，每天打卡 +5
+✅ 断签了？只把连击天数归 1。
+   经验和段位<strong>一分不收回</strong>，明天接着练
+✅ 段位只升不降：童生 → 秀才 → 举人 → 贡士 → 进士
+✅ 课时正确率过 60% 就算「这一课过了」，
+   不必满分也能往下走
+
+做错不该被惩罚，做错该被解释清楚。
+
+学习本来就是件长期的事，
+不该被一个「连击天数」绑架。
+
+你被哪个 App 的断签机制劝退过？😮💨
+
+#学习方法 #游戏化 #自我提升 #习惯养成 #独立开发
+#产品设计 #打卡 #学习工具 #汉语搭子</div>
+    </div>
+  </article>
+
+  <section class="notes">
+    <h2>发布前必看</h2>
+    <ul>
+      <li><b>手改成本人口吻</b> —— 现在这几篇读起来有 AI 味，小红书上一眼就能看出来。这一步不能省，至少把开头两句改成你自己会说的话。</li>
+      <li><b>只能手动发</b> —— 小红书没有给个人创作者的开放发布接口，自动发布违规、会封号。这个页面只负责让你复制得快一点。</li>
+      <li><b>正文里不贴 GitHub 链接</b> —— 仓库是 PUBLIC 的，含服务器 IP。也<b>不出现邮箱、真实姓名、学校、手机号</b>。</li>
+      <li><b>导流用「扣 1 我私你」</b> —— 直接贴网址会被限流（链接本身已经通了：<code>https://hanyu.zj17z.cn/</code>）。</li>
+      <li><b>每篇发出后 30 分钟内回评</b> —— 小红书早期互动权重高；一周至少 3 篇，别断更。</li>
+      <li><b>前 6 篇是用来找方向的，不是用来爆的</b> —— 记录每篇的曝光 / 点击率 / 收藏 / 评论，一周后把赢的那个标题结构复制到下一篇。</li>
+    </ul>
+  </section>
+
+</div>
+
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(function () {
+  var toast = document.getElementById('toast');
+  var timer = null;
+
+  function say(msg) {
+    toast.textContent = msg;
+    toast.classList.add('on');
+    clearTimeout(timer);
+    timer = setTimeout(function () { toast.classList.remove('on'); }, 1700);
+  }
+
+  // file:// 下 navigator.clipboard 可能不可用，保留 execCommand 兜底
+  function writeClipboard(text) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      return navigator.clipboard.writeText(text).then(function () { return true; }, function () { return legacy(text); });
+    }
+    return Promise.resolve(legacy(text));
+  }
+
+  function legacy(text) {
+    try {
+      var ta = document.createElement('textarea');
+      ta.value = text;
+      ta.setAttribute('readonly', '');
+      ta.style.position = 'fixed';
+      ta.style.top = '-1000px';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      ta.setSelectionRange(0, ta.value.length);
+      var ok = document.execCommand('copy');
+      document.body.removeChild(ta);
+      return ok;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function textOf(el) {
+    return el.textContent.replace(/^\s*\n/, '').replace(/\s+$/, '');
+  }
+
+  Array.prototype.forEach.call(document.querySelectorAll('[data-copy]'), function (btn) {
+    btn.addEventListener('click', function () {
+      var sel = btn.getAttribute('data-copy');
+      var src = sel === 'self' ? btn : document.querySelector(sel);
+      if (!src) { say('找不到要复制的内容'); return; }
+      var text = textOf(src);
+      writeClipboard(text).then(function (ok) {
+        say(ok ? '已复制 · ' + text.length + ' 字' : '复制失败，请手动选中');
+      });
+    });
+  });
+})();
+</script>
+</body>
+</html>

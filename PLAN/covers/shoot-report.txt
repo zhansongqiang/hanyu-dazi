@@ -1,0 +1,6 @@
+cover-01: 1242x1660  img=1(broken 0)  446 KB
+cover-02: 1242x1660  img=1(broken 0)  503 KB
+cover-03: 1242x1660  img=2(broken 0)  488 KB
+cover-04: 1242x1660  img=0(broken 0)  340 KB
+cover-05: 1242x1660  img=1(broken 0)  435 KB
+cover-06: 1242x1660  img=1(broken 0)  435 KB

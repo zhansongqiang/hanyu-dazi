@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html, body { width:1242px; height:1660px; overflow:hidden; }
+  body {
+    background: radial-gradient(circle at 50% 8%, #FCF9F4 0%, #F6F2EA 55%, #EDE6D9 100%);
+    font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+    color: #2B2B2B;
+    display: flex; flex-direction: column; justify-content: center;
+    padding: 0 96px;
+  }
+  .head {
+    font-size: 52px; color: #AE332E; letter-spacing: 8px;
+    font-weight: 900; text-align: center; margin-bottom: 30px;
+  }
+  .headline {
+    font-size: 40px; color: #8A7E73; letter-spacing: 4px;
+    text-align: center; margin-bottom: 72px; font-weight: 400;
+  }
+  /* 2×2 四声对照表：十字分隔线由单元格边框拼出，配对关系一眼可见 */
+  .grid { display: grid; grid-template-columns: 1fr 1fr; }
+  .cell {
+    display: flex; align-items: center; justify-content: center;
+    gap: 30px; padding: 76px 0;
+  }
+  .cell:nth-child(odd)  { border-right: 2px solid rgba(174,51,46,.20); }
+  .cell:nth-child(-n+2) { border-bottom: 2px solid rgba(174,51,46,.20); }
+  .py {
+    font-size: 96px; line-height: 1; color: #AE332E;
+    font-weight: 800; letter-spacing: 2px;
+  }
+  .hz { font-size: 200px; line-height: 1; font-weight: 900; }
+  /* 每格音调不同深浅：一声最浅 → 四声最深，暗示音高走向 */
+  .cell:nth-child(1) .hz { color: #4A443E; }
+  .cell:nth-child(2) .hz { color: #3A3530; }
+  .cell:nth-child(3) .hz { color: #2B2B2B; }
+  .cell:nth-child(4) .hz { color: #1A1A1A; }
+  .foot {
+    margin-top: 76px; font-size: 44px; color: #8A7E73;
+    letter-spacing: 4px; text-align: center;
+  }
+</style>
+</head>
+<body>
+  <div class="head">同一个音，四个字</div>
+  <div class="headline">念错一个调，意思就飞了</div>
+  <div class="grid">
+    <div class="cell"><span class="py">mā</span><span class="hz">妈</span></div>
+    <div class="cell"><span class="py">má</span><span class="hz">麻</span></div>
+    <div class="cell"><span class="py">mǎ</span><span class="hz">马</span></div>
+    <div class="cell"><span class="py">mà</span><span class="hz">骂</span></div>
+  </div>
+  <div class="foot">留学生学中文 · 声调第一课</div>
+</body>
+</html>

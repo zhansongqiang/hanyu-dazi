@@ -167,18 +167,65 @@ AUX L3.a2.api.order  实际返回顺序（三键并列时契约未定义，仅�
 
 ---
 
+## 四·续、改动 (h)：`be.cjs` 跟上契约 §4.4 新增的 `total`（20:45）
+
+- 起因：**用户指示** —— 2026-11-24「给对战详情接口加个 `total` 字段（契约 §4.4）」。
+  对应把参观战页那处「出的题，一共 **0** 道」的错文案（已结束的对战页打印 `items.length`，
+  而 `status != 'open'` 时 `items` 是 `null`）从根上修掉。
+- 行 / 版本：`58618 B / 84c7a3785062587e4874fbc9ca22e426`（10:38）
+  → **`59532 B / 07f82e0d2d2b85cb374374b0d7b023e6`（20:45:58，`be.cjs` mtime 实测）**。
+- 改动范围（**只有 G 段「游客视角挑战详情」四处**，其余一字未动）：
+  1. `keysEq(...)` 字段集 **10 → 11 项**（`total` 插在 `expiresAt` 与 `items` 之间）。
+  2. 新增「`total` 是正整数」。
+  3. 新增「`open` 时 `total` 必须等于 `items.length`」—— 钉死「后端不许另跑一次 count」。
+  4. done 态之后新增「`status=done`（`items:null`）时 `total` 仍给出该课题数」——
+     **这条就是那个 bug 的回归位。**
+- 读数（两个一次性夹具，**均为「空库 + 服务端自动迁移 + `npx tsx scripts/import-content.ts`」派生**）：
+  - **绿跑**：夹具 `run-total/be-run.db` ⇒ **PASS=322 FAIL=0 SKIP=0，exit 0，「全部通过。」**
+    （日志 `be-total.out.txt`，20:47:17）
+  - **变异跑**：把 `duel.ts` 里 `total:` 那一行**刻意删掉**（打上 `【变异测试临时删除】` 标记再重启）
+    ⇒ 夹具 `run-mut/be-mut.db`，**PASS=318 FAIL=4 SKIP=0，exit 1**（日志 `be-mut.out.txt`，20:48:08）
+    —— **失败恰好只有新增的那四条，其余 318 条纹丝不动**：
+    1. `游客视角挑战详情 —— 字段集逐字一致 (11 项)` → `{"missing":["total"],"extra":[]}`
+    2. `total 是正整数（题量，与 items 是否下发无关）`
+    3. `open 时 total 必须等于 items.length（后端以 items.length 为准，不许另跑 count）` → `{"items":25}`
+    4. `status=done（items:null）时 total 仍给出该课题数` → `{"课时题数":25}`
+  - ⇒ 这四条**有区分力**，不是恒真断言。**变异后 `duel.ts` 已按备份逐字节还原**：
+    `12243 B / 9f48542c2da146e9e13ff93bb3f104b1`（20:48:12），
+    `total:` 在文件里**只出现 1 次**、`【变异测试临时删除】` 出现 **0 次**（均实测）。
+- 另取到 `expired` 分支的真读数（现场没有自然过期的对战，全部 `expires_at` 都是 2026-12-01）：
+  在一次性夹具里把 `LVPE8F` 的 `expires_at` 改成 `2026-11-23 23:59:59` 后 curl
+  ⇒ `done` 与 `expired` **都是** `total=25 / items=null`，字段集同为那 11 项（课时：`自然五字` / 25 题）。
+- ⇒ **凡引用 `be.cjs` 上一版（58618 B）跑出的 319，都不再描述当前工作树。**
+  322 − 319 = **3**，恰为新增的三条 `total` 断言；`keysEq` 是**原地收紧**（10→11 项，条数不变）。
+- **渲染侧一并取到真读数**（`shot-duel.cjs`，390×844，走 vite dev 5173 → 后端 8091）：
+
+  | 场次（code） | 后端 `data` 摘要 | 页面那行字 | 「开始答题」 |
+  |---|---|---|---|
+  | `ESPAUM`（`done`） | `total:12, items:null` | **`验收同学 出的题，一共 12 道`** | 无（只有「看这场对战」） |
+  | `8Z23N4`（`open`） | `total:12, items:[…12 条…]` | **`验收同学 出的题，一共 12 道`** | 有 |
+
+  ⇒ 修前这条 `done` 会渲染成「一共 **0** 道」（`items` 为 `null` ⇒ `null.length`）。
+  两页各有一条 `404` 控制台报错，已实测定位为 dev server 的 **`/favicon.ico`**
+  （`curl http://localhost:5173/favicon.ico` → **404**，`/` → 200），**与本改动无关**。
+
+---
+
 ## 五、量具版本钉（谁都可以拿去比对）
 
 | 量具 | 字节 | md5 | 最后改动 | 这一版改了什么 |
 |---|---|---|---|---|
 | `be.cjs` | 58618 | `84c7a3785062587e4874fbc9ca22e426` | 10:38 | 夹具派生基线 `items 296→308`（§四） |
+| `be.cjs` **v2** | **59532** | **`07f82e0d2d2b85cb374374b0d7b023e6`** | **20:45** | G 段字段集 10→11 项 ＋ 3 条 `total` 断言（§四·续） |
 | `web.cjs` | 73536 | `081e1700a2523848b12d5ac0cffa77c3` | 10:54 | `L3.a.api` 判据修订（§三）＋ 补 `L3.chips.*` 5 条 AUX（§二） |
 | `web.cjs` **v2** | **75197** | **`5b21c66244de0886263e73641cebd99b`** | **11:3x** | 修 G4 段**读错库**（`fx3` → `API_DB`，默认 `fx-render`）；加 `items ≥ 300` 护栏；`G4.o.db` 收紧到按索引列校验；头注释同错更正（§七更正框） |
 | `check-tone.cjs` | 4816 | `352a8193b3680820daaa1c72d5cc84e6` | 10:38 | 内容侧断言（PASS=42 FAIL=0） |
 | `c-recheck.cjs` | 2431 | `4dd5cc7ee80ad62cd1409bc3cbe1ab45` | 10:51 | 只读现状读数，**不是验收**（见文件头注释） |
+| `shot-duel.cjs` | 2260 | `d76373bdd1055dad35d9e40f4b955bab` | 20:51:07 | ⚠️ **一次性取证工具，不是验收量具**：渲染单个对战详情页并抓 `/api/duels/*` 响应与含「道」的文案（§四·续。读数 `duel-done.*`/`duel-open.*` 为 20:51:14 / 20:51:17，**均晚于**本版 mtime） |
 
 都在 `C:\Users\Admin\AppData\Local\Temp\hd-vfy\`。历史版本：`be.cjs` 旧版
-`7a6051a570164b46c9d17494057c6502`（58279 B）。
+`7a6051a570164b46c9d17494057c6502`（58279 B，296 基线）与
+`84c7a3785062587e4874fbc9ca22e426`（58618 B，308 基线、无 `total`）。
 
 ---
 
@@ -192,8 +239,20 @@ AUX L3.a2.api.order  实际返回顺序（三键并列时契约未定义，仅�
 | `fx-be2` | 296 | 19 | 40 | 296 | ❌ 旧基线 |
 | **`fx-tone`** | **308** | **20** | **40** | **308** | ✅ **已在新基线** |
 | **`fx-render`** | **308** | **20** | **40** | **308** | ✅ **已在新基线** |
+| **`run-total/be-run.db`** | **308** | **20** | **40** | **308** | ✅ 新基线（20:47 绿跑 PASS=322，**跑一次即脏**） |
+| **`run-mut/be-mut.db`** | **308** | **20** | **40** | **308** | ✅ 新基线（20:48 变异跑 FAIL=4，已脏） |
 | `fx-c4` | — | — | — | — | ❌ **目录里没有 fixture.db** |
 | `DEV_8091`（`server/data/hanyu-dazi.db`） | 296 | 19 | — | — | ⛔ **共用开发库，只读** |
+
+- **夹具派生配方（20:4x 实测走通，以后照抄）**：`空库文件 → 起服务端自动迁移
+  （`DB_FILENAME` 按 `process.cwd()` 解析，别写相对路径）→ `npx tsx scripts/import-content.ts``。
+  `import-content` 按 **key 做 upsert**（不是删表重插 —— `attempts.item_id` 指着 items），
+  并顺带跑 `seedStamps`（15 枚成就）⇒ 得 `items=308 / lessons=20 / units=6 / achievements=15 /
+  kind='listen'=40`，十张业务活动表全为 0。
+- ⚠️ **`be.cjs` 每个夹具只能跑一次**：它开头那段就断言
+  `attempts / lesson_progress / xp_events / checkins / user_streaks / user_achievements /
+  duels / teams / team_members 全为 0`，而它自己会注册探针用户、造 4 场对战
+  ⇒ 第二次跑必然在「起点干净」就红。**绿跑与变异跑必须各用一个新夹具。**
 
 - `fx-render` 建于 **10:39**（晚于 `content.json` 的 10:37:07）⇒ **渲染重跑不需要重建夹具**。
 - 端口：**5173** vite dev（LISTENING）· **8091** 共用开发库（只读）· **8123** `fx-tone` 后端 · **8124** `fx-render` 后端。
@@ -290,6 +349,9 @@ C4  items 308 · lessons 20 · units 6 · distinct point_key 80
 3. **`lg.out.txt`（09:12）的 124/124** —— 那是**旧代码 + 已改前的判据**，双重过期。
 4. **`g1..g6.out.txt`（10:20–10:24）** —— 在旧 `duel.vue` 上跑的。
 5. `PLAN/fe-learn-l1-l5.txt` 里 `out5.txt` 那两条 TypeError 记录 —— OB-1 已修，现在是 0 条。
+6. **`be.cjs` 上一版（58618 B / `84c7a3785062587e4874fbc9ca22e426`）跑出的 319** ——
+   夹具基线没错，但**判据里没有 `total`**，与当前工作树（契约 §4.4 已加 `total`）不再是同一套书
+   ⇒ 现基线是 **322**（`59532 B / 07f82e0d…`，§四·续）。319 与 322 **不可互相顶替**。
 
 ---
 
@@ -332,6 +394,15 @@ C4  items 308 · lessons 20 · units 6 · distinct point_key 80
 但它**不是**审书：我的 `web.cjs` / `be.cjs` **一行都没有被第三方逐条读过**，
 L/G 那 11 格与 C1–C4 的判据覆盖面**照旧无人独立背书**。
 
+**20:4x 补一条自陈（`total` 这次改动）**：`total` 的产品代码（`server/src/routes/duel.ts`）、
+契约修订（`CONTRACT.md` §4.4）、前端两处（`api/duel.ts`、`pages/duel/duel.vue`）
+**都是我写的**；证它的量具（`be.cjs`）**也是我写的**。所以那组
+「绿跑 322/0 + 变异 4 红」只做到 **产品代码作者 = 量具作者**，**没有第三方**
+—— 它证明的是「照这本书跑，`total` 那四条在删掉实现后确实会红」，
+**不证明**我选的这四条覆盖到了契约 §4.4 该覆盖的全部情形。**这一格我签不了。**
+唯一的外证是用户自己拍的板（指示就是「加个 `total`」）与契约原文，
+不构成对**实现正确性**的独立复核。
+
 ---
 
 ## 十、移交与未结项（不在本文件解决的）
@@ -344,6 +415,12 @@ L/G 那 11 格与 C1–C4 的判据覆盖面**照旧无人独立背书**。
    `qbar-clock` / `四声辨调` / `sum-why` **命中均为 0**，且 `uni-scroll-view` 仍出现在 2 个 chunk 里
    ⇒ **部署前必须重跑 `npm run build:h5`**（吃内存，串行，归编排者）。
    只改 Web ⇒ **不升版本号、不重打 APK**。
+   **20:4x 追加**：这次重打要一并带上 `total` 那三处改动
+   （`server/src/routes/duel.ts` 走 `npx tsc`、`mobile/src/api/duel.ts`、`mobile/src/pages/duel/duel.vue`）。
+   本地演示后端（8091，**非 watch，全程未重载**）已是新代码，
+   实测 `GET /api/duels/ESPAUM`（`status=done`）= `…"expiresAt":"2026-12-01 23:59:59","total":12,"items":null}`。
+7. **本地演示进程还开着**（等用户发话再收）：后端 `b4u8andea`（`:8091`）＋ uni-app H5 dev `bcccmcm0q`（`:5173`）。
+   一次性夹具后端（8123 / 8124）**已全部停掉**，没有遗留 LISTENING。
 3. **`CR-01`（契约 §4.7）**：`POST /checkin` 打卡之后也要结算一次印章 —— 见 `PLAN/content.md:97`，
    复现脚本 `server/scripts/check-streak-timing.ts`。**这是唯一还压着用户拍板的一条。**
 4. **其余 CR 仍未结**：CR-1（`winner` 可空）、CR-2（对手位 first-write-wins）、CR-5（`slogan`）、
@@ -351,3 +428,45 @@ L/G 那 11 格与 C1–C4 的判据覆盖面**照旧无人独立背书**。
    详见 `PLAN/fe-game.md:71-160`。
 5. **`hd-accbr.cjs` 仍停着**，等用户明确许可才重启。
 6. 构建与部署**永远串行**、只由编排者执行；SSH 不外包给并行 agent。
+
+---
+
+## 十一、移动 APP 打包与参赛录屏（2026-11-25，全程实测）
+
+### 1. 壳与产物
+
+Capacitor **8.3.4**（`@capacitor/cli/core/android`），壳配置 `mobile/capacitor.config.ts`。
+两个构建期环境变量：`VITE_API_ORIGIN`（烘进代码的 API 绝对源）、`CAP_WEB_DIR`（喂 webDir）。
+
+| 产物 | 路径 | 字节 | mtime |
+|---|---|---|---|
+| 验证包（debug） | `mobile/android/app/build/outputs/apk/debug/app-debug.apk` | 4,593,654 | 2026-11-25 08:02:33 |
+| 发货包（release） | `mobile/android/app/build/outputs/apk/release/app-release.apk` | 3,198,638 | 2026-11-24 22:22:59 |
+
+**录完已回烤成发货态**（不带 `CAP_WEB_DIR` / `CAP_ALLOW_MIXED` 跑 `npx cap copy android`），实测：
+`assets/public` 里 `10.0.2.2:8091` 命中 **0**、`hanyu.zj17z.cn` 命中 **1**；
+`assets/capacitor.config.json` 的 `webDir` = `dist-capp`、`allowMixedContent` = `false`。
+`main` 源集只有 `<base-config cleartextTrafficPermitted="false" />`，明文豁免只存在于 `src/debug/res/xml/`，
+因此**只影响 debug 包，不影响发货件**。
+
+### 2. 演示录屏（参赛交付物）
+
+`PLAN/submission/demo-hanyu-dazi-v0.1.mp4` · 2:06（`mvhd` **125.726 s**）· **5,947,441 B**
+· md5 `878b2a3b92357f36a3779fc0fd14c9bd` · 720×1600 · 由 `.gitignore:48` 排除，不进仓库。
+分镜与逐句台词见 `PLAN/competition-submission.md` §四。
+
+### 3. 一条必须在部署前处理的
+
+演示账号 `apktest1124` 的练习历史是我按用户指示**灌进去的**
+（`server/scripts/seed-demo.ts`，回滚标记 `server/scripts/.seed-demo-marks.json`）。
+**这批数据现在只活在本地库**（`server/data/`）。按常规部署流程 checkpoint 并上传 `.db` 会把它带上线。
+⇒ **任何数据库上传之前，先按 `.seed-demo-marks.json` 里的 `maxAttempt`／`maxXp`／`maxCheckin`／`maxLp`
+回滚这批行**，否则线上会出现一个练习历史是编造的账号。
+
+### 4. 未结
+
+- 参赛表 **§二 创作方向（五选一）** 空着：活动页那五个选项原文我没有，**不猜**，等用户贴过来。
+- 作品简介实测 **287 字**（限 300）。
+- `mobile/android/` 整目录仍是 untracked。`mobile/android/.gitignore` 已由 Capacitor 生成并实测生效
+  （`app/build` → `build/` 规则命中；`.gradle/`、`local.properties`、`app/src/main/assets/public` 均命中），
+  **不需要在顶层 `.gitignore` 再加规则**。
