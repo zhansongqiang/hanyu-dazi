@@ -40,6 +40,11 @@ mobile/android/_scratch/
 # 签名密钥绝不进库（APK 用）；约定放在仓库外的 ~/.android-keystores/
 *.keystore
 *.jks
+# 口令文件同样挡掉：build.gradle 是从 ~/.android-keystores/keystore.properties
+# 读的（user.home 定位），正常不在仓库里；但只挡 *.jks/*.keystore 的话，
+# 一旦有人把属性文件丢进仓库目录就会被提交，所以这里显式再挡一道。
+keystore.properties
+*.keystore.properties
 
 # ── 打包中间物与截图 ───────────────────────────────────────────
 # 每次部署都会重写的 tar 包；shots 里的 png/txt 是取证记录，保留。
